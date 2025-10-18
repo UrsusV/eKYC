@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.env
+
+# Blockchain
+blockchain/artifacts/
+blockchain/cache/
+blockchain/coverage/
+blockchain/coverage.json
+blockchain/typechain/
+blockchain/typechain-types/
+
+# Hardhat files
+*.solidity
+*.abi
+*.bin
+
+# Backend
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/logs/*
+!backend/logs/.gitkeep
+backend/dist/
+backend/build/
+
+# Frontend
+frontend/*/build/
+frontend/*/dist/
+frontend/*/.next/
+frontend/*/out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS files
+Thumbs.db
+*.bak
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Build files
+build/
+dist/
+
+# Documentation
+docs/_site/
+docs/.sass-cache/
+
+# MongoDB dump files
+dump/
+
+# Redis dump files
+*.rdb
+*.aof

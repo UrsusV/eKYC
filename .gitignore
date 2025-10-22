@@ -86,3 +86,5 @@ dump/
 # Redis dump files
 *.rdb
 *.aof
+
+.env.*

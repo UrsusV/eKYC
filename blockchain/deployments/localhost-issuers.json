@@ -1,25 +1,25 @@
 {
   "network": "localhost",
   "contractAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "timestamp": "2025-10-19T07:17:51.097Z",
+  "timestamp": "2025-10-26T10:50:38.973Z",
   "authorizedIssuers": [
     {
       "name": "Dutch Bangla Bank",
       "address": "0x0000000000000000000000000000000000000001",
       "status": "newly_authorized",
-      "transactionHash": "0x015461a8068afe4aa193878e0e049501537828c4018806e7d12065871b8622a6"
+      "transactionHash": "0x77113f6ed0dab494b7b276de4b1637b9da8de17cbdd4f6b383e19554beeab58c"
     },
     {
       "name": "BRAC Bank",
       "address": "0x0000000000000000000000000000000000000002",
       "status": "newly_authorized",
-      "transactionHash": "0xc6ea3264f3a6fc196272b2a50df7fd35e0a34c104c02cbb74f399276a25fe14d"
+      "transactionHash": "0x27a5525d4d17af07ed933cd365eff2cc2a4343c13a17199fd184e3a7f283d157"
     },
     {
       "name": "City Bank",
       "address": "0x0000000000000000000000000000000000000003",
       "status": "newly_authorized",
-      "transactionHash": "0xd92ccec432328e23f6e252c56d27ef8278520adfd68a3e13b1689e0e011b3906"
+      "transactionHash": "0xf0e85cb16d4a847d978e066ec577bcca9af78a757497aa4567feda41e2c75887"
     }
   ],
   "failedIssuers": []

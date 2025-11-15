@@ -4,16 +4,18 @@ module.exports = {
     collectCoverageFrom: [
         'src/**/*.js',
         '!src/**/*.test.js',
-        '!src/server.js'
+        '!src/server.js',
+        '!src/**/__tests__/testSetup.js'
     ],
     testMatch: [
-        '**/__tests__/**/*.js',
+        '**/__tests__/**/*.test.js',
         '**/?(*.)+(spec|test).js'
     ],
     testPathIgnorePatterns: [
         '/node_modules/',
         '/dist/',
-        '/build/'
+        '/build/',
+        'testSetup.js'
     ],
     verbose: true,
     forceExit: true,

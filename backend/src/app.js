@@ -13,8 +13,8 @@ const path = require('path');
 // const errorHandler = require('./middleware/errorHandler');
 // const notFound = require('./middleware/notFound');
 
-// Import routes (will be created later)
-// const authRoutes = require('./routes/auth.routes');
+// Import routes
+const authRoutes = require('./routes/auth.routes');
 // const kycRoutes = require('./routes/kyc.routes');
 // const credentialRoutes = require('./routes/credential.routes');
 // const consentRoutes = require('./routes/consent.routes');
@@ -99,9 +99,9 @@ if (process.env.NODE_ENV === 'development') {
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// API routes (uncomment when routes are created)
+// API routes
 const apiVersion = process.env.API_VERSION || 'v1';
-// app.use(`/api/${apiVersion}/auth`, authRoutes);
+app.use(`/api/${apiVersion}/auth`, authRoutes);
 // app.use(`/api/${apiVersion}/kyc`, kycRoutes);
 // app.use(`/api/${apiVersion}/credentials`, credentialRoutes);
 // app.use(`/api/${apiVersion}/consent`, consentRoutes);

@@ -279,7 +279,7 @@ const bankSchema = new mongoose.Schema({
 
 // Indexes for Performance
 bankSchema.index({ bankCode: 1, isActive: 1 });
-bankSchema.index({ routingNumber: 1 });
+// Note: 'routingNumber' already indexed via unique: true
 bankSchema.index({ 'kycIntegration.isEnabled': 1 });
 bankSchema.index({ 'blockchainIntegration.isAuthorizedIssuer': 1 });
 bankSchema.index({ 'regulatory.complianceStatus': 1 });

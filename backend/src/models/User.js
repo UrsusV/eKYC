@@ -260,7 +260,7 @@ const userSchema = new mongoose.Schema({
 
 // Indexes for Performance
 userSchema.index({ email: 1, isActive: 1 });
-userSchema.index({ 'personalInfo.nid': 1 }, { sparse: true });
+// Note: 'personalInfo.nid' already indexed via unique: true, sparse: true
 userSchema.index({ 'contactInfo.primaryPhone': 1 });
 userSchema.index({ kycStatus: 1, role: 1 });
 userSchema.index({ createdAt: -1 });

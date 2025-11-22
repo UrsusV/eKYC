@@ -15,7 +15,8 @@ const path = require('path');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
-// const kycRoutes = require('./routes/kyc.routes');
+const kycRoutes = require('./routes/kyc.routes');
+const bankRoutes = require('./routes/bank.routes');
 // const credentialRoutes = require('./routes/credential.routes');
 // const consentRoutes = require('./routes/consent.routes');
 // const adminRoutes = require('./routes/admin.routes');
@@ -102,7 +103,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // API routes
 const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/auth`, authRoutes);
-// app.use(`/api/${apiVersion}/kyc`, kycRoutes);
+app.use(`/api/${apiVersion}/kyc`, kycRoutes);
+app.use(`/api/${apiVersion}/bank`, bankRoutes);
 // app.use(`/api/${apiVersion}/credentials`, credentialRoutes);
 // app.use(`/api/${apiVersion}/consent`, consentRoutes);
 // app.use(`/api/${apiVersion}/admin`, adminRoutes);

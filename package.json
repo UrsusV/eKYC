@@ -1,0 +1,30 @@
+{
+  "name": "ekyc-system",
+  "version": "1.0.0",
+  "description": "eKYC Blockchain System - Root Package",
+  "main": "index.js",
+  "scripts": {
+    "demo": "node scripts/demo-flow.js",
+    "install:all": "npm install && cd backend && npm install && cd ../blockchain && npm install",
+    "start:docker": "docker-compose up -d",
+    "stop:docker": "docker-compose down",
+    "start:blockchain": "cd blockchain && npm run node",
+    "deploy:contracts": "cd blockchain && npm run deploy:local",
+    "start:backend": "cd backend && npm run dev",
+    "test:backend": "cd backend && npm test",
+    "test:blockchain": "cd blockchain && npm test"
+  },
+  "keywords": [
+    "eKYC",
+    "blockchain",
+    "ethereum",
+    "KYC"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "mongoose": "^8.7.2"
+  }
+}

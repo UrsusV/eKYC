@@ -9,9 +9,9 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const path = require('path');
 
-// Import custom middleware (will be created later)
-// const errorHandler = require('./middleware/errorHandler');
-// const notFound = require('./middleware/notFound');
+// Import custom middleware
+const errorHandler = require('./middleware/errorHandler');
+const notFound = require('./middleware/notFound');
 
 // Import routes
 const authRoutes = require('./routes/auth.routes');
@@ -134,8 +134,8 @@ app.get('/', (req, res) => {
     });
 });
 
-// Error handling (uncomment when middleware is created)
-// app.use(notFound);
-// app.use(errorHandler);
+// Error handling - must be last
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;

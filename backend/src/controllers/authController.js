@@ -2,11 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const Bank = require('../models/Bank');
-const {
-    registerCustomerSchema,
-    registerBankOfficerSchema,
-    loginSchema
-} = require('../validators/authValidators');
+const { registerCustomerSchema, registerBankOfficerSchema, loginSchema } = require('../validators/authValidators');
 
 /**
  * Generate JWT token
@@ -41,13 +37,34 @@ const sendTokenResponse = (user, statusCode, res, message = 'Success') => {
         message,
         data: {
             user: {
-                id: user._id,
+                _id: user._id,
                 email: user.email,
                 role: user.role,
-                fullName: user.personalInfo?.fullName,
-                kycStatus: user.kycStatus,
-                isEmailVerified: user.isEmailVerified,
-                isPhoneVerified: user.isPhoneVerified
+                personalInfo: {
+                    fullName: user.personalInfo?.fullName || '',
+                    firstName: user.personalInfo?.firstName,
+                    lastName: user.personalInfo?.lastName,
+                    dateOfBirth: user.personalInfo?.dateOfBirth,
+                    gender: user.personalInfo?.gender,
+                    nationality: user.personalInfo?.nationality,
+                    nid: user.personalInfo?.nid,
+                    passport: user.personalInfo?.passport
+                },
+                contactInfo: {
+                    phoneNumber: user.contactInfo?.primaryPhone || '',
+                    address: {
+                        street: user.contactInfo?.presentAddress?.addressLine,
+                        city: user.contactInfo?.presentAddress?.district,
+                        state: user.contactInfo?.presentAddress?.division,
+                        zipCode: user.contactInfo?.presentAddress?.postCode,
+                        country: 'Bangladesh'
+                    }
+                },
+                bankOfficerInfo: user.bankOfficerInfo,
+                walletAddress: user.walletAddress,
+                isActive: user.isActive !== undefined ? user.isActive : true,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt
             },
             accessToken: token,
             refreshToken,
@@ -69,7 +86,7 @@ exports.registerCustomer = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
-                errors: error.details.map(detail => ({
+                errors: error.details.map((detail) => ({
                     field: detail.path.join('.'),
                     message: detail.message
                 }))
@@ -80,10 +97,7 @@ exports.registerCustomer = async (req, res) => {
 
         // Check if user already exists
         const existingUser = await User.findOne({
-            $or: [
-                { email: email.toLowerCase() },
-                { 'personalInfo.nid': nid_number }
-            ]
+            $or: [{ email: email.toLowerCase() }, { 'personalInfo.nid': nid_number }]
         });
 
         if (existingUser) {
@@ -134,7 +148,6 @@ exports.registerCustomer = async (req, res) => {
         });
 
         sendTokenResponse(user, 201, res, 'Customer registered successfully');
-
     } catch (error) {
         console.error('Register customer error:', error);
         res.status(500).json({
@@ -158,7 +171,7 @@ exports.registerBankOfficer = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
-                errors: error.details.map(detail => ({
+                errors: error.details.map((detail) => ({
                     field: detail.path.join('.'),
                     message: detail.message
                 }))
@@ -242,7 +255,6 @@ exports.registerBankOfficer = async (req, res) => {
         });
 
         sendTokenResponse(user, 201, res, 'Bank officer registered successfully');
-
     } catch (error) {
         console.error('Register bank officer error:', error);
         res.status(500).json({
@@ -266,7 +278,7 @@ exports.login = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Validation error',
-                errors: error.details.map(detail => ({
+                errors: error.details.map((detail) => ({
                     field: detail.path.join('.'),
                     message: detail.message
                 }))
@@ -327,7 +339,6 @@ exports.login = async (req, res) => {
         await user.save({ validateBeforeSave: false });
 
         sendTokenResponse(user, 200, res, 'Login successful');
-
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({
@@ -356,10 +367,7 @@ exports.refreshToken = async (req, res) => {
 
         try {
             // Verify refresh token
-            const decoded = jwt.verify(
-                refreshToken,
-                process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
-            );
+            const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
 
             // Check if user still exists
             const user = await User.findById(decoded.id);
@@ -391,7 +399,6 @@ exports.refreshToken = async (req, res) => {
                     expiresIn: process.env.JWT_EXPIRE || '24h'
                 }
             });
-
         } catch (err) {
             if (err.name === 'JsonWebTokenError') {
                 return res.status(401).json({
@@ -407,7 +414,6 @@ exports.refreshToken = async (req, res) => {
             }
             throw err;
         }
-
     } catch (error) {
         console.error('Refresh token error:', error);
         res.status(500).json({

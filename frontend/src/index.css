@@ -1,0 +1,10 @@
+/**
+ * Main Styles
+ * 
+ * Import the design system styles that include:
+ * - Tailwind base, components, and utilities
+ * - CSS custom properties from design tokens
+ * - Custom component utilities
+ */
+
+@import './styles/tailwind.css';

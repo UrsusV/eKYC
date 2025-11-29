@@ -1,130 +1,197 @@
-import { Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import Layout from '@components/Layout';
-import Home from '@pages/Home';
-import About from '@pages/About';
-import CredentialsPage from '@pages/CredentialsPage';
-import CredentialDetailPage from '@pages/CredentialDetailPage';
-import IssuerDashboardPage from '@pages/IssuerDashboardPage';
-import VerifyCredentialPage from '@pages/VerifyCredentialPage';
-import VerificationPage from '@pages/VerificationPage';
-import ProfilePage from '@pages/ProfilePage';
-import SettingsPage from '@pages/SettingsPage';
-import UsersManagementPage from '@pages/UsersManagementPage';
-import AuditLogsPage from '@pages/AuditLogsPage';
-import { ToastProvider } from '@/components/Toast';
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
-// Create a client for React Query
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
+// Dashboard Redirect Component
+const DashboardRedirect = () => {
+  const { user } = useAuth();
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (user.role === "bank_officer") {
+    return <Navigate to="/officer/dashboard" replace />;
+  }
+
+  return (
+    <Layout>
+      <DashboardPage />
+    </Layout>
+  );
+};
+
+// Pages
+import HomePage from "@/pages/HomePage";
+import LoginPage from "@/pages/LoginPage";
+import {
+  RegisterCustomerPage,
+  RegisterBankOfficerPage,
+  DashboardPage,
+  SubmitKycPage,
+  KycStatusPage,
+  KycHistoryPage,
+  CredentialsPage,
+  CredentialDetailPage,
+  ConsentsPage,
+  ProfilePage,
+  OfficerDashboardPage,
+  KycQueuePage,
+  ReviewKycPage,
+  IssueCredentialPage,
+} from "@/pages";
+
+// Components
+import Layout from "@/components/Layout";
+import PrivateRoute from "@/components/PrivateRoute";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 function App() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Layout pageTitle="Dashboard">
-                <Home />
-              </Layout>
-            }
-          />
-          <Route
-            path="/about"
-            element={
-              <Layout pageTitle="About">
-                <About />
-              </Layout>
-            }
-          />
-          <Route
-            path="/credentials"
-            element={
-              <Layout pageTitle="My Credentials">
-                <CredentialsPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/credentials/:id"
-            element={
-              <Layout pageTitle="Credential Details">
-                <CredentialDetailPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/issuer"
-            element={
-              <Layout pageTitle="Issuer Dashboard">
-                <IssuerDashboardPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/verify"
-            element={
-              <Layout pageTitle="Verify Credential">
-                <VerifyCredentialPage 
-                  verifierId="verifier-org-001"
-                  verifierName="e-KYC Verification Service"
-                />
-              </Layout>
-            }
-          />
-          <Route
-            path="/verification"
-            element={
-              <Layout pageTitle="Verification">
-                <VerificationPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <Layout pageTitle="Your Profile">
-                <ProfilePage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <Layout pageTitle="Settings">
-                <SettingsPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/users"
-            element={
-              <Layout pageTitle="User Management">
-                <UsersManagementPage />
-              </Layout>
-            }
-          />
-          <Route
-            path="/audit"
-            element={
-              <Layout pageTitle="Audit Logs">
-                <AuditLogsPage />
-              </Layout>
-            }
-          />
-          
-          {/* Add more routes as needed */}
-        </Routes>
-      </ToastProvider>
-    </QueryClientProvider>
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register/customer" element={<RegisterCustomerPage />} />
+      <Route
+        path="/register/bank-officer"
+        element={<RegisterBankOfficerPage />}
+      />
+
+      {/* Protected Routes - All Users */}
+      <Route
+        path="/dashboard"
+        element={
+          <PrivateRoute>
+            <DashboardRedirect />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <ProfilePage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+
+      {/* Protected Routes - Customer */}
+      <Route
+        path="/kyc/submit"
+        element={
+          <PrivateRoute allowedRoles={["customer"]}>
+            <Layout>
+              <SubmitKycPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/kyc/status/:requestId"
+        element={
+          <PrivateRoute allowedRoles={["customer"]}>
+            <Layout>
+              <KycStatusPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/kyc/history"
+        element={
+          <PrivateRoute allowedRoles={["customer"]}>
+            <Layout>
+              <KycHistoryPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/credentials"
+        element={
+          <PrivateRoute allowedRoles={["customer"]}>
+            <Layout>
+              <CredentialsPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/credentials/:credentialId"
+        element={
+          <PrivateRoute allowedRoles={["customer"]}>
+            <Layout>
+              <CredentialDetailPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/consents"
+        element={
+          <PrivateRoute allowedRoles={["customer"]}>
+            <Layout>
+              <ConsentsPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+
+      {/* Protected Routes - Bank Officer */}
+      <Route
+        path="/officer/dashboard"
+        element={
+          <PrivateRoute allowedRoles={["bank_officer"]}>
+            <Layout>
+              <OfficerDashboardPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/officer/kyc-requests"
+        element={
+          <PrivateRoute allowedRoles={["bank_officer"]}>
+            <Layout>
+              <KycQueuePage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/officer/kyc-request/:id"
+        element={
+          <PrivateRoute allowedRoles={["bank_officer"]}>
+            <Layout>
+              <ReviewKycPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/officer/issue-credential/:requestId"
+        element={
+          <PrivateRoute allowedRoles={["bank_officer"]}>
+            <Layout>
+              <IssueCredentialPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 

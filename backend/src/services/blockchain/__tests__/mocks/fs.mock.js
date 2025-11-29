@@ -54,12 +54,19 @@ const mockArtifact = {
   bytecode: '0x1234567890abcdef',
 };
 
-// Mock functions
-const mockReadFile = jest.fn().mockResolvedValue(JSON.stringify(mockArtifact));
+// Mock functions - return the mock artifact for any file path
+const mockReadFile = jest.fn((filePath, encoding) => {
+  // Always return the mock artifact regardless of path
+  return Promise.resolve(JSON.stringify(mockArtifact));
+});
 
 // Create promises object for fs.promises pattern
 const mockFsPromises = {
   readFile: mockReadFile,
+  writeFile: jest.fn().mockResolvedValue(),
+  mkdir: jest.fn().mockResolvedValue(),
+  access: jest.fn().mockResolvedValue(),
+  stat: jest.fn().mockResolvedValue({ isFile: () => true }),
 };
 
 // Export structure
@@ -70,6 +77,7 @@ module.exports = {
 
   // For testing access
   mockArtifact,
+  mockReadFile,
 
   // Also spread mockFsPromises for direct fs/promises require
   ...mockFsPromises,

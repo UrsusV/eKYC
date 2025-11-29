@@ -11,10 +11,20 @@ const { authenticate, authorize } = require('../middleware/auth');
 const router = express.Router();
 
 /**
+ * Utility to conditionally apply middleware
+ * Skips rate limiting in test environment
+ */
+const conditionalMiddleware = (middleware) => {
+    return process.env.NODE_ENV === 'test'
+        ? (req, res, next) => next()
+        : middleware;
+};
+
+/**
  * Rate limiter for credential issuance
  * 10 requests per hour to prevent abuse
  */
-const credentialIssuanceRateLimiter = rateLimit({
+const credentialIssuanceRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 10,
     message: {
@@ -23,13 +33,13 @@ const credentialIssuanceRateLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false
-});
+}));
 
 /**
  * General rate limiter for bank routes
  * 200 requests per 15 minutes per IP
  */
-const bankRateLimiter = rateLimit({
+const bankRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 200,
     message: {
@@ -38,7 +48,7 @@ const bankRateLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false
-});
+}));
 
 // Apply rate limiter to all bank routes
 router.use(bankRateLimiter);

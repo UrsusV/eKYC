@@ -17,8 +17,8 @@ const notFound = require('./middleware/notFound');
 const authRoutes = require('./routes/auth.routes');
 const kycRoutes = require('./routes/kyc.routes');
 const bankRoutes = require('./routes/bank.routes');
+const consentRoutes = require('./routes/consent.routes');
 // const credentialRoutes = require('./routes/credential.routes');
-// const consentRoutes = require('./routes/consent.routes');
 // const adminRoutes = require('./routes/admin.routes');
 
 // Initialize express app
@@ -44,15 +44,17 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW) || 15) * 60 * 1000,
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-    message: 'Too many requests from this IP, please try again later.',
-    standardHeaders: true,
-    legacyHeaders: false,
-});
-app.use('/api/', limiter);
+// Rate limiting - completely disabled in test environment
+if (process.env.NODE_ENV !== 'test') {
+    const limiter = rateLimit({
+        windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW) || 15) * 60 * 1000,
+        max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+        message: 'Too many requests from this IP, please try again later.',
+        standardHeaders: true,
+        legacyHeaders: false,
+    });
+    app.use('/api/', limiter);
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -105,8 +107,8 @@ const apiVersion = process.env.API_VERSION || 'v1';
 app.use(`/api/${apiVersion}/auth`, authRoutes);
 app.use(`/api/${apiVersion}/kyc`, kycRoutes);
 app.use(`/api/${apiVersion}/bank`, bankRoutes);
+app.use(`/api/${apiVersion}/consent`, consentRoutes);
 // app.use(`/api/${apiVersion}/credentials`, credentialRoutes);
-// app.use(`/api/${apiVersion}/consent`, consentRoutes);
 // app.use(`/api/${apiVersion}/admin`, adminRoutes);
 
 // Health check endpoint

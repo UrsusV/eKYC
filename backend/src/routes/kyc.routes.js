@@ -11,10 +11,20 @@ const { authenticate, authorize } = require('../middleware/auth');
 const router = express.Router();
 
 /**
+ * Utility to conditionally apply middleware
+ * Skips rate limiting in test environment
+ */
+const conditionalMiddleware = (middleware) => {
+    return process.env.NODE_ENV === 'test'
+        ? (req, res, next) => next()
+        : middleware;
+};
+
+/**
  * Rate limiter for KYC submission
  * 5 requests per hour per user to prevent abuse
  */
-const kycSubmitRateLimiter = rateLimit({
+const kycSubmitRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 5, // 5 requests per hour
     message: {
@@ -24,13 +34,13 @@ const kycSubmitRateLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: false
-});
+}));
 
 /**
  * General rate limiter for KYC routes
  * 100 requests per 15 minutes per IP
  */
-const kycRateLimiter = rateLimit({
+const kycRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100, // 100 requests per 15 minutes
     message: {
@@ -39,7 +49,7 @@ const kycRateLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false
-});
+}));
 
 // Apply rate limiter to all KYC routes
 router.use(kycRateLimiter);

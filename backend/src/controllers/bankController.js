@@ -1,6 +1,7 @@
 const kycService = require('../services/kycService');
 const KycRequest = require('../models/KycRequest');
 const User = require('../models/User');
+const Credential = require('../models/Credential');
 const { getCredentialService } = require('../services/blockchain');
 const crypto = require('crypto');
 const {
@@ -345,6 +346,44 @@ exports.issueCredential = async (req, res) => {
             { useQueue: false } // Execute immediately for synchronous response
         );
 
+        // Calculate expiry date (1 year from now)
+        const expiryDate = new Date();
+        expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+
+        // Create Credential record in database
+        const credential = await Credential.create({
+            userId: kycRequest.userId._id,
+            kycRequestId: kycRequest._id,
+            bankId: kycRequest.bankId,
+            issuedBy: bankOfficer._id,
+            credentialType: 'identity_verification',
+            blockchain: {
+                credentialHash: credentialHash,
+                transactionHash: blockchainResult.transactionHash,
+                blockNumber: blockchainResult.blockNumber,
+                holderAddress: kycRequest.userId.walletAddress,
+                issuerAddress: blockchainResult.issuerAddress || process.env.BLOCKCHAIN_ISSUER_ADDRESS || '0x0000000000000000000000000000000000000000',
+                blockchainCredentialId: blockchainResult.credentialId,
+                networkId: process.env.BLOCKCHAIN_NETWORK || 'localhost',
+                gasUsed: blockchainResult.gasUsed
+            },
+            status: 'active',
+            issuedAt: new Date(),
+            expiresAt: expiryDate,
+            credentialData: {
+                documentType: 'kyc_verification',
+                fullName: kycRequest.userId.personalInfo?.fullName,
+                dateOfBirth: kycRequest.userId.personalInfo?.dateOfBirth,
+                nationality: kycRequest.userId.personalInfo?.nationality,
+                kycLevel: kycRequest.kycLevel
+            },
+            verificationProof: {
+                verificationMethod: 'manual',
+                verificationNotes: `KYC approved by bank officer`,
+                documentsVerified: kycRequest.documents?.map(doc => doc.documentType) || []
+            }
+        });
+
         // Update KYC request with blockchain details
         kycRequest.blockchain = {
             credentialHash: credentialHash,
@@ -360,14 +399,22 @@ exports.issueCredential = async (req, res) => {
             success: true,
             message: 'Blockchain credential issued successfully',
             data: {
-                requestId: kycRequest.requestId,
-                credentialHash: credentialHash,
-                transactionHash: blockchainResult.transactionHash,
-                blockNumber: blockchainResult.blockNumber,
-                credentialId: blockchainResult.credentialId,
-                gasUsed: blockchainResult.gasUsed,
-                status: kycRequest.status,
-                issuedAt: kycRequest.blockchain.issuedAt
+                credential: {
+                    _id: credential._id,
+                    credentialId: credential.credentialId,
+                    userId: credential.userId,
+                    kycRequestId: credential.kycRequestId,
+                    credentialType: credential.credentialType,
+                    status: credential.status,
+                    issuedAt: credential.issuedAt,
+                    expiresAt: credential.expiresAt
+                },
+                transaction: {
+                    transactionHash: blockchainResult.transactionHash,
+                    blockNumber: blockchainResult.blockNumber,
+                    blockchainCredentialId: blockchainResult.credentialId,
+                    gasUsed: blockchainResult.gasUsed
+                }
             }
         });
 

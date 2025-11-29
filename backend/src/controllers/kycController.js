@@ -1,6 +1,7 @@
 const kycService = require('../services/kycService');
 const KycRequest = require('../models/KycRequest');
 const Bank = require('../models/Bank');
+const Credential = require('../models/Credential');
 const {
     submitKycSchema,
     paginationSchema,
@@ -238,45 +239,48 @@ exports.getCredentials = async (req, res) => {
         const { status, page, limit } = value;
         const userId = req.user.id;
 
-        // Build query for blockchain credentials
+        // Build query for Credential model
         const query = {
-            userId,
-            'blockchain.issuedOnChain': true
+            userId
         };
 
         // Filter by status
-        if (status === 'active') {
-            query.status = 'approved';
-        } else if (status === 'revoked') {
-            query.status = 'revoked';
-        } else {
-            // 'all' - no additional filter
-            query.status = { $in: ['approved', 'revoked'] };
+        if (status !== 'all') {
+            query.status = status;
         }
 
         // Calculate skip for pagination
         const skip = (page - 1) * limit;
 
-        // Get credentials
-        const credentials = await KycRequest.find(query)
-            .select('requestId status blockchain kycLevel createdAt workflow')
+        // Get credentials from Credential model
+        const credentials = await Credential.find(query)
             .populate('bankId', 'bankName bankCode')
-            .sort({ 'blockchain.issuedAt': -1 })
+            .populate('kycRequestId', 'requestId kycLevel')
+            .sort({ issuedAt: -1 })
             .limit(limit)
             .skip(skip);
 
         // Get total count
-        const totalCount = await KycRequest.countDocuments(query);
+        const totalCount = await Credential.countDocuments(query);
 
         // Format response
         const formattedCredentials = credentials.map(cred => ({
-            requestId: cred.requestId,
-            credentialHash: cred.blockchain.credentialHash,
+            _id: cred._id,
+            credentialId: cred.credentialId,
+            userId: cred.userId,
+            kycRequestId: cred.kycRequestId?._id,
+            requestId: cred.kycRequestId?.requestId,
+            credentialType: cred.credentialType,
+            status: cred.status,
             transactionHash: cred.blockchain.transactionHash,
             blockNumber: cred.blockchain.blockNumber,
-            issuedAt: cred.blockchain.issuedAt,
-            status: cred.status,
-            kycLevel: cred.kycLevel,
+            credentialHash: cred.blockchain.credentialHash,
+            blockchainCredentialId: cred.blockchain.blockchainCredentialId,
+            issuedAt: cred.issuedAt,
+            expiresAt: cred.expiresAt,
+            isExpired: cred.isExpired,
+            isValid: cred.isValid,
+            kycLevel: cred.kycRequestId?.kycLevel,
             bank: {
                 name: cred.bankId?.bankName,
                 code: cred.bankId?.bankCode

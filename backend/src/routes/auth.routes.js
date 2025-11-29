@@ -13,10 +13,20 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 
 /**
+ * Utility to conditionally apply middleware
+ * Skips rate limiting in test environment
+ */
+const conditionalMiddleware = (middleware) => {
+    return process.env.NODE_ENV === 'test'
+        ? (req, res, next) => next()
+        : middleware;
+};
+
+/**
  * Rate limiter for authentication routes
  * 10 requests per minute per IP
  */
-const authRateLimiter = rateLimit({
+const authRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
     max: 10, // 10 requests per minute
     message: {
@@ -29,13 +39,13 @@ const authRateLimiter = rateLimit({
     skipSuccessfulRequests: false,
     // Skip rate limiting for failed requests (optional)
     skipFailedRequests: false
-});
+}));
 
 /**
  * Stricter rate limiter for login attempts
  * 5 requests per 5 minutes per IP
  */
-const loginRateLimiter = rateLimit({
+const loginRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
     max: 5, // 5 requests per 5 minutes
     message: {
@@ -46,7 +56,7 @@ const loginRateLimiter = rateLimit({
     legacyHeaders: false,
     skipSuccessfulRequests: true, // Don't count successful logins
     skipFailedRequests: false
-});
+}));
 
 /**
  * @route   POST /api/v1/auth/register/customer

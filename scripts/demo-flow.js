@@ -99,6 +99,7 @@ let bankOfficerToken = '';
 let kycRequestId = '';
 let credentialId = '';
 let bankId = '';
+let consentIds = [];
 
 /**
  * Check if server is running
@@ -192,6 +193,8 @@ async function registerCustomer() {
     }
 }
 
+
+
 /**
  * Step 2: Customer submits KYC request
  */
@@ -218,6 +221,111 @@ async function submitKycRequest() {
         return true;
     } catch (error) {
         printError('KYC submission failed');
+        printData('Error', error.response?.data || error.message);
+        return false;
+    }
+}
+
+
+/**
+ * Step 2.5: Create consent requests for the KYC
+ */
+async function createConsentRequests() {
+    printSection('Step 2.5: Create Consent Requests');
+
+    try {
+        if (!kycRequestId) {
+            printError('KYC request ID is required to create consents');
+            return false;
+        }
+
+        const consentTypes = [
+            {
+                consentType: 'data_collection',
+                purpose: 'To collect and verify your personal information for KYC compliance and regulatory requirements',
+                dataCategories: ['personal_info', 'contact_info', 'identification']
+            },
+            {
+                consentType: 'data_processing',
+                purpose: 'To process your personal data for identity verification, risk assessment, and fraud prevention',
+                dataCategories: ['personal_info', 'identification', 'financial']
+            },
+            {
+                consentType: 'blockchain_storage',
+                purpose: 'To store your verified credentials on a secure blockchain network for immutable record-keeping and future verification',
+                dataCategories: ['identification']
+            }
+        ];
+
+        printInfo(`Creating ${consentTypes.length} consent requests...`);
+        
+        const createdConsents = [];
+        
+        for (const consent of consentTypes) {
+            const response = await api.post('/consent/create', {
+                kycRequestId: kycRequestId,
+                ...consent
+            }, {
+                headers: { Authorization: `Bearer ${customerToken}` }
+            });
+            
+            createdConsents.push(response.data.data);
+        }
+
+        printSuccess(`${createdConsents.length} consent requests created successfully`);
+        
+        createdConsents.forEach((consent, index) => {
+            printData(`Consent ${index + 1}`, {
+                consentId: consent.consentId,
+                type: consent.consentType,
+                status: consent.status,
+                mandatory: consent.isMandatory
+            });
+        });
+
+        consentIds = createdConsents.map(c => c._id);
+
+        return true;
+    } catch (error) {
+        printError('Consent request creation failed');
+        printData('Error', error.response?.data || error.message);
+        return false;
+    }
+}
+
+/**
+ * Step 2.7: Grant all required consents
+ */
+async function grantConsents() {
+    printSection('Step 2.7: Grant Required Consents');
+
+    try {
+        if (consentIds.length === 0) {
+            printError('No consents to grant');
+            return false;
+        }
+
+        printInfo(`Granting ${consentIds.length} consent(s)...`);
+
+        // Bulk grant all consents
+        const grantResponse = await api.post('/consent/bulk-grant', {
+            consentIds: consentIds,
+            agreed: true
+        }, {
+            headers: { Authorization: `Bearer ${customerToken}` }
+        });
+
+        printSuccess(`${grantResponse.data.data.grantedCount} consent(s) granted successfully`);
+        
+        printData('Granted Consents', grantResponse.data.data.consents.map(c => ({
+            consentId: c.consentId,
+            type: c.consentType,
+            status: c.status
+        })));
+
+        return true;
+    } catch (error) {
+        printError('Consent granting failed');
         printData('Error', error.response?.data || error.message);
         return false;
     }
@@ -479,6 +587,8 @@ async function runDemo() {
         { name: 'Create Bank', fn: createBank },
         { name: 'Register Customer', fn: registerCustomer },
         { name: 'Submit KYC Request', fn: submitKycRequest },
+        { name: 'Create Consent Requests', fn: createConsentRequests },
+        { name: 'Grant Consents', fn: grantConsents },
         { name: 'Register Bank Officer', fn: registerBankOfficer },
         { name: 'Login Bank Officer', fn: loginBankOfficer },
         { name: 'Get KYC Requests', fn: getKycRequests },

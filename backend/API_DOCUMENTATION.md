@@ -8,6 +8,7 @@
   - [Authentication APIs](#authentication-apis)
   - [KYC APIs](#kyc-apis)
   - [Bank APIs](#bank-apis)
+  - [Consent APIs](#consent-apis)
 - [Error Handling](#error-handling)
 - [Rate Limiting](#rate-limiting)
 - [Testing](#testing)
@@ -614,6 +615,352 @@ Issue a blockchain credential for an approved KYC request.
   }
 }
 ```
+
+---
+
+### Consent APIs
+
+The Consent API provides GDPR-compliant consent management for KYC data processing. Users must grant explicit consent before their data can be collected, processed, shared, or stored on the blockchain.
+
+#### 1. Create Consent Request
+Create a new consent request for a KYC submission.
+
+**Endpoint:** `POST /consent/create`
+
+**Access:** Private (Customer only)
+
+**Request Body:**
+```json
+{
+  "kycRequestId": "64f8a3b2c1234567890abce0",
+  "consentType": "data_collection",
+  "purpose": "To collect and verify your personal information for KYC compliance and regulatory requirements",
+  "dataCategories": ["personal_info", "contact_info", "identification"],
+  "duration": 365,
+  "isMandatory": true,
+  "canBeWithdrawn": true
+}
+```
+
+**Consent Types:**
+- `data_collection`: Permission to collect personal information
+- `data_processing`: Permission to process personal data for verification
+- `data_sharing`: Permission to share data with third parties
+- `blockchain_storage`: Permission to store credentials on blockchain
+- `biometric_collection`: Permission to collect biometric data
+- `credit_check`: Permission to perform credit checks
+- `background_check`: Permission to perform background verification
+- `all`: Comprehensive consent for all operations
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Consent request created successfully",
+  "data": {
+    "_id": "64f8a3b2c1234567890abce5",
+    "consentId": "CONSENT-1700654400000-ABC123",
+    "userId": "64f8a3b2c1234567890abcde",
+    "kycRequestId": "64f8a3b2c1234567890abce0",
+    "consentType": "data_collection",
+    "status": "pending",
+    "purpose": "To collect and verify your personal information for KYC compliance",
+    "consentText": "I hereby grant permission to collect my personal information...",
+    "duration": 365,
+    "dataCategories": ["personal_info", "contact_info", "identification"],
+    "isMandatory": true,
+    "canBeWithdrawn": true,
+    "createdAt": "2024-11-22T10:00:00.000Z"
+  }
+}
+```
+
+---
+
+#### 2. Grant Consent
+Grant permission for a specific consent request.
+
+**Endpoint:** `POST /consent/:consentId/grant`
+
+**Access:** Private (Consent owner only)
+
+**Request Body:**
+```json
+{
+  "agreed": true
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Consent granted successfully",
+  "data": {
+    "_id": "64f8a3b2c1234567890abce5",
+    "consentId": "CONSENT-1700654400000-ABC123",
+    "status": "granted",
+    "grantedAt": "2024-11-22T10:05:00.000Z",
+    "expiresAt": "2025-11-22T10:05:00.000Z",
+    "auditLog": [
+      {
+        "action": "consent_granted",
+        "timestamp": "2024-11-22T10:05:00.000Z",
+        "performedBy": "64f8a3b2c1234567890abcde",
+        "details": "User granted consent",
+        "ipAddress": "192.168.1.1"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### 3. Deny Consent
+Deny a consent request.
+
+**Endpoint:** `POST /consent/:consentId/deny`
+
+**Access:** Private (Consent owner only)
+
+**Request Body:**
+```json
+{
+  "reason": "I do not agree with the data sharing policy"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Consent denied",
+  "data": {
+    "_id": "64f8a3b2c1234567890abce5",
+    "consentId": "CONSENT-1700654400000-ABC123",
+    "status": "denied",
+    "auditLog": [
+      {
+        "action": "consent_denied",
+        "timestamp": "2024-11-22T10:05:00.000Z",
+        "performedBy": "64f8a3b2c1234567890abcde",
+        "details": "I do not agree with the data sharing policy"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### 4. Revoke Consent
+Withdraw a previously granted consent (GDPR right to withdraw consent).
+
+**Endpoint:** `POST /consent/:consentId/revoke`
+
+**Access:** Private (Consent owner only)
+
+**Request Body:**
+```json
+{
+  "reason": "I no longer wish to share my data with third parties"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Consent revoked successfully",
+  "data": {
+    "_id": "64f8a3b2c1234567890abce5",
+    "consentId": "CONSENT-1700654400000-ABC123",
+    "status": "revoked",
+    "revokedAt": "2024-11-22T12:00:00.000Z",
+    "revocationReason": "I no longer wish to share my data with third parties",
+    "auditLog": [
+      {
+        "action": "consent_revoked",
+        "timestamp": "2024-11-22T12:00:00.000Z",
+        "performedBy": "64f8a3b2c1234567890abcde",
+        "details": "I no longer wish to share my data with third parties"
+      }
+    ]
+  }
+}
+```
+
+**Note:** Only consents with `canBeWithdrawn: true` can be revoked.
+
+---
+
+#### 5. Get My Consents
+Retrieve all consent requests for the authenticated user with filtering options.
+
+**Endpoint:** `GET /consent/my-consents`
+
+**Access:** Private (Customer only)
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 10)
+- `status` (optional): Filter by status (pending, granted, denied, revoked, expired, all)
+- `consentType` (optional): Filter by consent type
+- `kycRequestId` (optional): Filter by KYC request
+
+**Example:**
+```
+GET /consent/my-consents?status=granted&page=1&limit=10
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "consents": [
+      {
+        "_id": "64f8a3b2c1234567890abce5",
+        "consentId": "CONSENT-1700654400000-ABC123",
+        "consentType": "data_collection",
+        "status": "granted",
+        "purpose": "To collect and verify your personal information",
+        "grantedAt": "2024-11-22T10:05:00.000Z",
+        "expiresAt": "2025-11-22T10:05:00.000Z",
+        "isMandatory": true,
+        "canBeWithdrawn": true
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 10,
+    "pages": 1
+  }
+}
+```
+
+---
+
+#### 6. Get Consent Details
+Get detailed information about a specific consent.
+
+**Endpoint:** `GET /consent/:consentId`
+
+**Access:** Private (Consent owner only)
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "64f8a3b2c1234567890abce5",
+    "consentId": "CONSENT-1700654400000-ABC123",
+    "userId": "64f8a3b2c1234567890abcde",
+    "kycRequestId": "64f8a3b2c1234567890abce0",
+    "consentType": "blockchain_storage",
+    "status": "granted",
+    "purpose": "To store your verified credentials on a secure blockchain network",
+    "consentText": "I hereby grant permission to store my verified identity credentials...",
+    "duration": 365,
+    "grantedAt": "2024-11-22T10:05:00.000Z",
+    "expiresAt": "2025-11-22T10:05:00.000Z",
+    "dataCategories": ["identification"],
+    "thirdParties": [],
+    "isMandatory": false,
+    "canBeWithdrawn": true,
+    "auditLog": [
+      {
+        "action": "consent_created",
+        "timestamp": "2024-11-22T10:00:00.000Z",
+        "performedBy": "64f8a3b2c1234567890abcde",
+        "details": "Consent request created"
+      },
+      {
+        "action": "consent_granted",
+        "timestamp": "2024-11-22T10:05:00.000Z",
+        "performedBy": "64f8a3b2c1234567890abcde",
+        "details": "User granted consent"
+      }
+    ],
+    "createdAt": "2024-11-22T10:00:00.000Z",
+    "updatedAt": "2024-11-22T10:05:00.000Z"
+  }
+}
+```
+
+---
+
+#### 7. Bulk Grant Consents
+Grant multiple consents at once (useful for initial KYC submission).
+
+**Endpoint:** `POST /consent/bulk-grant`
+
+**Access:** Private (Customer only)
+
+**Request Body:**
+```json
+{
+  "consentIds": [
+    "64f8a3b2c1234567890abce5",
+    "64f8a3b2c1234567890abce6",
+    "64f8a3b2c1234567890abce7"
+  ],
+  "agreed": true
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "3 consent(s) granted successfully",
+  "data": {
+    "grantedCount": 3,
+    "consents": [
+      {
+        "_id": "64f8a3b2c1234567890abce5",
+        "consentId": "CONSENT-1700654400000-ABC123",
+        "consentType": "data_collection",
+        "status": "granted",
+        "grantedAt": "2024-11-22T10:05:00.000Z"
+      },
+      {
+        "_id": "64f8a3b2c1234567890abce6",
+        "consentId": "CONSENT-1700654400000-DEF456",
+        "consentType": "data_processing",
+        "status": "granted",
+        "grantedAt": "2024-11-22T10:05:00.000Z"
+      },
+      {
+        "_id": "64f8a3b2c1234567890abce7",
+        "consentId": "CONSENT-1700654400000-GHI789",
+        "consentType": "blockchain_storage",
+        "status": "granted",
+        "grantedAt": "2024-11-22T10:05:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+**Consent Status Flow:**
+```
+pending → granted → (active)
+        ↘ denied
+
+granted → revoked (if canBeWithdrawn: true)
+        → expired (after duration)
+```
+
+**Important Notes:**
+- All consent operations are logged in the audit trail
+- Mandatory consents must be granted for KYC processing to proceed
+- Consent expiration is checked automatically based on the duration field
+- GDPR compliance: Users can view, grant, deny, and revoke consents at any time
+- IP addresses are captured for audit purposes
 
 ---
 

@@ -2,7 +2,10 @@ module.exports = {
     testEnvironment: 'node',
 
     // Setup files
-    setupFilesAfterEnv: ['<rootDir>/src/services/blockchain/__tests__/setup.js'],
+    setupFilesAfterEnv: [
+        '<rootDir>/src/tests/setup.js',
+        '<rootDir>/src/services/blockchain/__tests__/setup.js'
+    ],
 
     coverageDirectory: 'coverage',
     collectCoverageFrom: [

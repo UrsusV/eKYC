@@ -179,17 +179,20 @@ exports.getKycHistory = async (req, res) => {
             });
         }
 
-        const { page, limit } = value;
+        const { page, limit, status } = value;
         const userId = req.user.id;
 
         // Calculate skip
         const skip = (page - 1) * limit;
 
+        // Build filter options
+        const options = { limit, skip };
+        if (status) {
+            options.status = status;
+        }
+
         // Get user's KYC history using service
-        const result = await kycService.getUserKYCHistory(userId, {
-            limit,
-            skip
-        });
+        const result = await kycService.getUserKYCHistory(userId, options);
 
         res.status(200).json({
             success: true,

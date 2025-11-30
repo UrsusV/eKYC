@@ -5,12 +5,16 @@ class ConsentService {
   async getMyConsents(
     params: PaginationParams = {}
   ): Promise<ApiResponse<Consent[]>> {
-    const { page = 1, limit = 10, status = "all" } = params;
+    const { page = 1, limit = 10, status } = params;
     const queryParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
-      status,
     });
+    
+    // Only add status if it's provided and not 'all'
+    if (status && status !== "all") {
+      queryParams.append("status", status);
+    }
 
     return await apiClient.get<Consent[]>(
       `/consent/my-consents?${queryParams}`

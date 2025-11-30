@@ -99,8 +99,16 @@ const paginationSchema = Joi.object({
             'number.integer': 'Limit must be an integer',
             'number.min': 'Limit must be at least 1',
             'number.max': 'Limit cannot exceed 100'
+        }),
+    
+    status: Joi.string()
+        .valid('draft', 'submitted', 'pending', 'under_review', 'approved', 'rejected')
+        .optional()
+        .messages({
+            'string.base': 'Status must be a string',
+            'any.only': 'Status must be one of: draft, submitted, pending, under_review, approved, rejected'
         })
-});
+}).unknown(false);
 
 /**
  * Credential filter validation schema

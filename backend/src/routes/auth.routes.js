@@ -24,11 +24,11 @@ const conditionalMiddleware = (middleware) => {
 
 /**
  * Rate limiter for authentication routes
- * 10 requests per minute per IP
+ * 30 requests per minute per IP (increased for development)
  */
 const authRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 10, // 10 requests per minute
+    max: 30, // 30 requests per minute (increased from 10)
     message: {
         success: false,
         message: 'Too many requests from this IP, please try again after a minute.'
@@ -43,11 +43,11 @@ const authRateLimiter = conditionalMiddleware(rateLimit({
 
 /**
  * Stricter rate limiter for login attempts
- * 5 requests per 5 minutes per IP
+ * 20 requests per 5 minutes per IP (increased for development)
  */
 const loginRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 5, // 5 requests per 5 minutes
+    max: 20, // 20 requests per 5 minutes (increased from 5)
     message: {
         success: false,
         message: 'Too many login attempts from this IP, please try again after 5 minutes.'

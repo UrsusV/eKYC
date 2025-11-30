@@ -33,12 +33,16 @@ class KycService {
   async getKycHistory(
     params: PaginationParams = {}
   ): Promise<ApiResponse<KycRequest[]>> {
-    const { page = 1, limit = 10, status = "all" } = params;
+    const { page = 1, limit = 10, status } = params;
     const queryParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
-      status,
     });
+    
+    // Only add status if it's provided and not 'all'
+    if (status && status !== "all") {
+      queryParams.append("status", status);
+    }
 
     return await apiClient.get<KycRequest[]>(`/kyc/history?${queryParams}`);
   }
@@ -46,12 +50,16 @@ class KycService {
   async getCredentials(
     params: PaginationParams = {}
   ): Promise<ApiResponse<Credential[]>> {
-    const { page = 1, limit = 10, status = "all" } = params;
+    const { page = 1, limit = 10, status } = params;
     const queryParams = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
-      status,
     });
+    
+    // Only add status if it's provided and not 'all'
+    if (status && status !== "all") {
+      queryParams.append("status", status);
+    }
 
     return await apiClient.get<Credential[]>(`/kyc/credentials?${queryParams}`);
   }

@@ -21,6 +21,7 @@ const DashboardRedirect = () => {
 // Pages
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
+import NotFoundPage from "@/pages/NotFoundPage";
 import {
   RegisterCustomerPage,
   RegisterBankOfficerPage,
@@ -189,8 +190,8 @@ function App() {
         }
       />
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* 404 - Not Found */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

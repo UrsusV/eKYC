@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/contexts/ToastContext";
 import { Award, Mail, Lock, AlertCircle } from "lucide-react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { handleApiError } from "@/utils";
@@ -8,6 +9,7 @@ import { handleApiError } from "@/utils";
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const toast = useToast();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -22,9 +24,12 @@ const LoginPage: React.FC = () => {
 
     try {
       await login(formData);
+      toast.success("Login successful! Welcome back.");
       navigate("/dashboard");
     } catch (err) {
-      setError(handleApiError(err));
+      const errorMessage = handleApiError(err);
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

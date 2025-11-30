@@ -111,13 +111,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {user && (
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-medium">
-                  {user.personalInfo.firstName?.[0] ||
+                <div className="h-10 w-10 rounded-full bg-primary-600 flex items-center justify-center text-white font-medium text-lg">
+                  {user.personalInfo?.fullName?.[0]?.toUpperCase() ||
                     user.email[0].toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {user.personalInfo.fullName || user.email}
+                    {user.personalInfo?.fullName || user.email.split("@")[0]}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
                     {user.role.replace("_", " ")}

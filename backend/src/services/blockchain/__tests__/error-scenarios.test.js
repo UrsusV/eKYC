@@ -5,6 +5,7 @@
 
 jest.mock('ethers', () => require('./mocks/ethers.mock'));
 jest.mock('fs', () => require('./mocks/fs.mock'));
+jest.mock('fs/promises', () => require('./mocks/fs.mock'));
 
 const { ethers } = require('ethers');
 const BlockchainProvider = require('../core/BlockchainProvider');
@@ -21,10 +22,18 @@ const {
   ValidationError,
 } = require('../utils/errors');
 
+const BlockchainValidator = require('../utils/validators');
+
 describe('Error Scenarios', () => {
+  const originalProviderGetNetwork = ethers.JsonRpcProvider.prototype.getNetwork;
+
+  afterEach(() => {
+    ethers.JsonRpcProvider.prototype.getNetwork = originalProviderGetNetwork;
+  });
+
   describe('Network Errors', () => {
     test('should handle network disconnection', async () => {
-      const provider = new BlockchainProvider('localhost');
+      const provider = new BlockchainProvider('localhost', { maxRetries: 0 });
 
       ethers.JsonRpcProvider.prototype.getNetwork = jest.fn()
         .mockRejectedValue(new Error('Network disconnected'));
@@ -84,6 +93,7 @@ describe('Error Scenarios', () => {
           status: 0, // Reverted
           blockNumber: 123,
           gasUsed: 100000n,
+          logs: [],
         });
 
       const txHash = '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef';
@@ -184,35 +194,30 @@ describe('Error Scenarios', () => {
   describe('Validation Errors', () => {
     test('should validate invalid address', () => {
       expect(() => {
-        const { BlockchainValidator } = require('../utils/validators');
         BlockchainValidator.validateAddress('invalid');
       }).toThrow(ValidationError);
     });
 
     test('should validate invalid transaction hash', () => {
       expect(() => {
-        const { default: BlockchainValidator } = require('../utils/validators');
         BlockchainValidator.validateTxHash('0xinvalid');
       }).toThrow(ValidationError);
     });
 
     test('should validate invalid bytes32', () => {
       expect(() => {
-        const { default: BlockchainValidator } = require('../utils/validators');
         BlockchainValidator.validateBytes32('invalid');
       }).toThrow(ValidationError);
     });
 
     test('should validate invalid credential type', () => {
       expect(() => {
-        const { default: BlockchainValidator } = require('../utils/validators');
         BlockchainValidator.validateCredentialType(999);
       }).toThrow(ValidationError);
     });
 
     test('should validate invalid gas limit', () => {
       expect(() => {
-        const { default: BlockchainValidator } = require('../utils/validators');
         BlockchainValidator.validateGasLimit(-1);
       }).toThrow(ValidationError);
     });

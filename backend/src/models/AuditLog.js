@@ -30,7 +30,9 @@ const auditLogSchema = new mongoose.Schema({
         userEmail: {
             type: String,
             required: true,
-            immutable: true
+            immutable: function() {
+                return !this.isAnonymized;
+            }
         },
         userRole: {
             type: String,
@@ -435,6 +437,9 @@ auditLogSchema.pre('save', function(next) {
 // Pre-save Middleware: Prevent updates
 auditLogSchema.pre('save', function(next) {
     if (!this.isNew) {
+        if (this.$locals && this.$locals.allowUpdate) {
+            return next();
+        }
         return next(new Error('Audit logs cannot be modified after creation'));
     }
     next();
@@ -543,7 +548,7 @@ auditLogSchema.statics.findFailedLogins = function(userId, hours = 24) {
 };
 
 // Instance Method: Anonymize PII
-auditLogSchema.methods.anonymize = function() {
+auditLogSchema.methods.anonymize = async function() {
     if (this.isAnonymized) return this;
 
     if (this.actor.userEmail) {
@@ -561,7 +566,11 @@ auditLogSchema.methods.anonymize = function() {
     this.isAnonymized = true;
     this.anonymizedAt = new Date();
 
-    return this.save();
+    this.$locals = this.$locals || {};
+    this.$locals.allowUpdate = true;
+    await this.save();
+    delete this.$locals.allowUpdate;
+    return this;
 };
 
 module.exports = mongoose.model('AuditLog', auditLogSchema);

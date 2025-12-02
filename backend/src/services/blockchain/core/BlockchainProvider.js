@@ -9,16 +9,24 @@ const { NetworkError, ConnectionError } = require('../utils/errors');
 const { NETWORKS, TIMEOUTS, CACHE_TTL } = require('../utils/constants');
 const BlockchainValidator = require('../utils/validators');
 
+const shouldUseMockProvider = process.env.MOCK_BLOCKCHAIN_PROVIDER === 'true';
+
 class BlockchainProvider {
-  constructor(network = 'localhost') {
+  constructor(network = 'localhost', options = {}) {
+    const {
+      useMockProvider = shouldUseMockProvider,
+      maxRetries = 5,
+    } = options;
+
     this.logger = createLogger('BlockchainProvider');
     this.network = BlockchainValidator.validateNetwork(network, Object.keys(NETWORKS).map(k => NETWORKS[k].name));
     this.networkConfig = this._getNetworkConfig();
     this.provider = null;
     this.isConnected = false;
     this.connectionRetries = 0;
-    this.maxRetries = 5;
+    this.maxRetries = maxRetries;
     this.cache = new Map();
+    this.useMockProvider = useMockProvider;
   }
 
   /**
@@ -46,17 +54,21 @@ class BlockchainProvider {
       // Determine RPC URL
       let rpcUrl = this.networkConfig.rpcUrl;
 
-      // For Sepolia/Mainnet, use environment variable if available
-      if (this.network === 'sepolia' && process.env.SEPOLIA_RPC_URL) {
-        rpcUrl = process.env.SEPOLIA_RPC_URL;
-      } else if (this.network === 'mainnet' && process.env.MAINNET_RPC_URL) {
-        rpcUrl = process.env.MAINNET_RPC_URL;
-      } else if (process.env.BLOCKCHAIN_RPC_URL) {
-        rpcUrl = process.env.BLOCKCHAIN_RPC_URL;
-      }
+      if (this.useMockProvider) {
+        this.provider = this._createMockProvider();
+      } else {
+        // For Sepolia/Mainnet, use environment variable if available
+        if (this.network === 'sepolia' && process.env.SEPOLIA_RPC_URL) {
+          rpcUrl = process.env.SEPOLIA_RPC_URL;
+        } else if (this.network === 'mainnet' && process.env.MAINNET_RPC_URL) {
+          rpcUrl = process.env.MAINNET_RPC_URL;
+        } else if (process.env.BLOCKCHAIN_RPC_URL) {
+          rpcUrl = process.env.BLOCKCHAIN_RPC_URL;
+        }
 
-      // Create provider
-      this.provider = new ethers.JsonRpcProvider(rpcUrl);
+        // Create provider
+        this.provider = new ethers.JsonRpcProvider(rpcUrl);
+      }
 
       // Verify connection
       await this._verifyConnection();
@@ -64,9 +76,10 @@ class BlockchainProvider {
       this.isConnected = true;
       this.connectionRetries = 0;
 
-      this.logger.success(`Connected to ${this.network} network`, {
+      const latestBlockNumber = await this.provider.getBlockNumber();
+      this.logger.success(`Connected to ${this.network} network${this.useMockProvider ? ' (mock)' : ''}`, {
         chainId: this.networkConfig.chainId,
-        blockNumber: await this.getBlockNumber(),
+        blockNumber: latestBlockNumber,
       });
 
       return this.provider;
@@ -76,6 +89,10 @@ class BlockchainProvider {
         network: this.network,
         attempt: this.connectionRetries + 1,
       });
+
+      if (error instanceof NetworkError) {
+        throw error;
+      }
 
       // Retry connection
       if (this.connectionRetries < this.maxRetries) {
@@ -114,6 +131,9 @@ class BlockchainProvider {
 
       return true;
     } catch (error) {
+      if (error instanceof NetworkError) {
+        throw error;
+      }
       throw new ConnectionError('Failed to verify blockchain connection', {
         originalError: error.message,
       });
@@ -449,6 +469,13 @@ class BlockchainProvider {
     this.cache.clear();
   }
 
+  _createMockProvider() {
+    if (typeof global.__BLOCKCHAIN_PROVIDER_FACTORY__ === 'function') {
+      return global.__BLOCKCHAIN_PROVIDER_FACTORY__(this.networkConfig);
+    }
+    return new InMemoryJsonRpcProvider(this.networkConfig);
+  }
+
   /**
    * Utility: Create timeout promise
    */
@@ -463,6 +490,98 @@ class BlockchainProvider {
    */
   _sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+
+class InMemoryJsonRpcProvider {
+  constructor(networkConfig) {
+    this.networkConfig = networkConfig;
+    this.listeners = new Map();
+  }
+
+  async getNetwork() {
+    return {
+      chainId: BigInt(this.networkConfig.chainId),
+      name: this.networkConfig.name,
+    };
+  }
+
+  async getBlockNumber() {
+    return 123;
+  }
+
+  async getFeeData() {
+    return {
+      gasPrice: 1000000000n,
+      maxFeePerGas: 2000000000n,
+      maxPriorityFeePerGas: 1000000000n,
+    };
+  }
+
+  async getBalance() {
+    return 10000000000000000000000n;
+  }
+
+  async getTransactionCount() {
+    return 5;
+  }
+
+  async getTransaction(hash) {
+    return {
+      hash,
+      from: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+      to: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+      nonce: 0,
+      gasLimit: 200000n,
+      gasPrice: 1000000000n,
+      data: '0x',
+      value: 0n,
+      chainId: this.networkConfig.chainId,
+    };
+  }
+
+  async getTransactionReceipt(hash) {
+    return {
+      hash,
+      status: 1,
+      blockNumber: 123,
+      gasUsed: 100000n,
+    };
+  }
+
+  async getBlock(blockHashOrNumber) {
+    return {
+      number: typeof blockHashOrNumber === 'number' ? blockHashOrNumber : 123,
+      hash: '0xabcdef',
+      timestamp: Date.now(),
+      transactions: [],
+    };
+  }
+
+  async waitForTransaction(hash) {
+    return {
+      hash,
+      status: 1,
+      blockNumber: 123,
+    };
+  }
+
+  async estimateGas() {
+    return 100000n;
+  }
+
+  async broadcastTransaction(signedTx) {
+    return {
+      hash: signedTx || '0xmocktx',
+    };
+  }
+
+  async getCode() {
+    return '0x1234';
+  }
+
+  removeAllListeners() {
+    this.listeners.clear();
   }
 }
 

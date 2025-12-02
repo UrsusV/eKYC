@@ -202,10 +202,14 @@ describe('User Model', () => {
             it('should accept valid Bangladesh phone number', async () => {
                 const validPhones = ['01712345678', '01812345678', '01912345678', '01612345678'];
 
-                for (const phone of validPhones) {
+                for (const [index, phone] of validPhones.entries()) {
                     const user = new User({
                         ...validUserData,
                         email: `test${phone}@example.com`,
+                        personalInfo: {
+                            ...validUserData.personalInfo,
+                            nid: `1234567${index}0${index}` // ensure unique NID per iteration
+                        },
                         contactInfo: {
                             ...validUserData.contactInfo,
                             primaryPhone: phone
@@ -466,9 +470,13 @@ describe('User Model', () => {
 
         it('should return true if password changed after JWT issued', async () => {
             const user = await User.create(validUserData);
+
+            // Create JWT timestamp (in seconds)
             const JWTTimestamp = Math.floor(Date.now() / 1000);
 
-            await new Promise(resolve => setTimeout(resolve, 1100)); // Wait 1.1 seconds
+            // Wait 2 seconds to ensure password change is after JWT
+            // Note: passwordChangedAt is set to Date.now() - 1000 in pre-save middleware
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             user.password = 'NewPassword@123';
             await user.save();

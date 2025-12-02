@@ -23,9 +23,15 @@ class CredentialService {
     this.logger = createLogger('CredentialService');
     this.config = {
       network: config.network || process.env.BLOCKCHAIN_NETWORK || 'localhost',
-      contractAddress: config.contractAddress || process.env.CONTRACT_ADDRESS,
-      privateKey: config.privateKey || process.env.BLOCKCHAIN_PRIVATE_KEY,
-      artifactPath: config.artifactPath || path.join(
+      contractAddress: typeof config.contractAddress !== 'undefined'
+        ? config.contractAddress
+        : process.env.CONTRACT_ADDRESS,
+      privateKey: typeof config.privateKey !== 'undefined'
+        ? config.privateKey
+        : process.env.BLOCKCHAIN_PRIVATE_KEY,
+      artifactPath: typeof config.artifactPath !== 'undefined'
+        ? config.artifactPath
+        : path.join(
         __dirname,
         '../../../blockchain/artifacts/contracts/CredentialRegistry.sol/CredentialRegistry.json'
       ),

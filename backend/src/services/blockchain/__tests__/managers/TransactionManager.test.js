@@ -5,6 +5,7 @@
 
 jest.mock('ethers', () => require('../mocks/ethers.mock'));
 jest.mock('fs', () => require('../mocks/fs.mock'));
+jest.mock('fs/promises', () => require('../mocks/fs.mock'));
 
 const TransactionManager = require('../../managers/TransactionManager');
 const BlockchainProvider = require('../../core/BlockchainProvider');

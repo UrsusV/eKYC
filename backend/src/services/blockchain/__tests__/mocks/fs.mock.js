@@ -55,10 +55,7 @@ const mockArtifact = {
 };
 
 // Mock functions - return the mock artifact for any file path
-const mockReadFile = jest.fn((filePath, encoding) => {
-  // Always return the mock artifact regardless of path
-  return Promise.resolve(JSON.stringify(mockArtifact));
-});
+const mockReadFile = jest.fn(() => Promise.resolve(JSON.stringify(mockArtifact)));
 
 // Create promises object for fs.promises pattern
 const mockFsPromises = {

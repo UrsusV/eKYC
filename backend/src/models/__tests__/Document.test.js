@@ -454,14 +454,24 @@ describe('Document Model', () => {
 
         describe('findExpired', () => {
             it('should find expired documents', async () => {
-                await Document.create({
+                const doc = await Document.create({
                     ...validDocumentData,
-                    expiryDate: new Date(Date.now() - 1000),
-                    isExpired: false
+                    expiryDate: new Date(Date.now() + 60000)
                 });
+
+                await Document.updateOne(
+                    { _id: doc._id },
+                    {
+                        $set: {
+                            expiryDate: new Date(Date.now() - 1000),
+                            isExpired: false
+                        }
+                    }
+                );
 
                 const expired = await Document.findExpired();
                 expect(expired.length).toBe(1);
+                expect(expired[0]._id.toString()).toBe(doc._id.toString());
             });
         });
 
@@ -589,14 +599,16 @@ describe('Document Model', () => {
                     encryption: {
                         isEncrypted: true,
                         algorithm: 'aes-256-cbc',
-                        iv: '',
+                        iv: 'existingivvalue123',
                         encryptionKeyId: 'key_001'
                     }
                 });
 
+                const previousIv = doc.encryption.iv;
                 doc.encryptMetadata('test-key');
                 expect(doc.encryption.iv).toBeDefined();
                 expect(doc.encryption.iv.length).toBeGreaterThan(0);
+                expect(doc.encryption.iv).not.toBe(previousIv);
             });
         });
     });

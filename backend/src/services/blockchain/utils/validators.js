@@ -81,8 +81,17 @@ class BlockchainValidator {
    * Validate private key
    */
   static isValidPrivateKey(privateKey) {
+    if (typeof privateKey !== 'string') {
+      return false;
+    }
+
+    const normalized = privateKey.trim();
+    if (!/^0x[a-fA-F0-9]{64}$/.test(normalized)) {
+      return false;
+    }
+
     try {
-      new ethers.Wallet(privateKey);
+      new ethers.Wallet(normalized);
       return true;
     } catch (error) {
       return false;
@@ -101,7 +110,7 @@ class BlockchainValidator {
       throw new ValidationError('Invalid private key format');
     }
 
-    return privateKey;
+    return privateKey.trim();
   }
 
   /**

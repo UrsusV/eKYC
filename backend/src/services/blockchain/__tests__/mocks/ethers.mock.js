@@ -129,6 +129,7 @@ class MockContract {
 
     // Mock contract methods
     this.issueCredential = jest.fn().mockResolvedValue(createMockTransaction());
+    this.issueCredential.estimateGas = jest.fn().mockResolvedValue(100000n);
     this.verifyCredential = jest.fn().mockResolvedValue(true);
     this.getCredential = jest.fn().mockResolvedValue([
       '0xabcd1234',
@@ -140,7 +141,9 @@ class MockContract {
     ]);
     this.getHolderCredentials = jest.fn().mockResolvedValue(['0xabcd1234']);
     this.revokeCredential = jest.fn().mockResolvedValue(createMockTransaction());
+    this.revokeCredential.estimateGas = jest.fn().mockResolvedValue(100000n);
     this.grantConsent = jest.fn().mockResolvedValue(createMockTransaction());
+    this.grantConsent.estimateGas = jest.fn().mockResolvedValue(100000n);
   }
 
   connect(runner) {

@@ -392,7 +392,7 @@ class TransactionManager {
 
       // Estimate gas for contract call
       const gasEstimate = await this.contractManager.estimateGas(method, params, {}, contractId);
-      const gasLimit = BigInt(Math.floor(Number(gasEstimate) * GAS.ESTIMATION_BUFFER));
+      const gasLimit = Math.floor(Number(gasEstimate) * GAS.ESTIMATION_BUFFER);
 
       // Prepare transaction options
       const txOptions = {
@@ -424,7 +424,6 @@ class TransactionManager {
         contractId,
         params,
       });
-
       throw new TransactionError(`Failed to execute contract method: ${method}`, {
         contractId,
         method,

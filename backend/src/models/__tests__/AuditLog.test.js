@@ -49,7 +49,7 @@ describe('AuditLog Model', () => {
                 ...validLogData,
                 action: { ...validLogData.action, type: undefined }
             });
-            await expect(log.save()).rejects.toThrow(/Action type is required/);
+            await expect(log.save()).rejects.toThrow(/action\.type.+required/i);
         });
 
         it('should require IP address', async () => {

@@ -22,7 +22,7 @@ describe('Bank Model', () => {
             division: 'Dhaka',
             district: 'Dhaka',
             postCode: '1212',
-            phone: '02-9566371',
+            phone: '+8801712345678',
             email: 'info@testbank.com',
             website: 'https://www.testbank.com'
         }

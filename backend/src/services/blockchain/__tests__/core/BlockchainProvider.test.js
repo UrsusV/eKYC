@@ -6,10 +6,13 @@
 // Mock ethers before importing
 jest.mock('ethers', () => require('../mocks/ethers.mock'));
 jest.mock('fs', () => require('../mocks/fs.mock'));
+jest.mock('fs/promises', () => require('../mocks/fs.mock'));
 
 const BlockchainProvider = require('../../core/BlockchainProvider');
 const { NetworkError, ConnectionError } = require('../../utils/errors');
 const { MockJsonRpcProvider } = require('../mocks/ethers.mock');
+
+const originalMockGetNetwork = MockJsonRpcProvider.prototype.getNetwork;
 
 describe('BlockchainProvider', () => {
   let provider;
@@ -18,6 +21,7 @@ describe('BlockchainProvider', () => {
     if (provider) {
       await provider.disconnect();
     }
+    MockJsonRpcProvider.prototype.getNetwork = originalMockGetNetwork;
     jest.clearAllMocks();
   });
 

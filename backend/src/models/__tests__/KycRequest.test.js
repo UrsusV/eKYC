@@ -237,6 +237,7 @@ describe('KycRequest Model', () => {
 
         it('should calculate reviewDuration', async () => {
             const kyc = await KycRequest.create({ ...validKycData, status: 'under_review' });
+            kyc.workflow.submittedAt = new Date(Date.now() - 1000 * 60 * 60);
             kyc.workflow.reviewStartedAt = new Date(Date.now() - 1000 * 60 * 30); // 30 min ago
 
             kyc.status = 'approved';

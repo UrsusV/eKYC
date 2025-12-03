@@ -4,8 +4,7 @@
  */
 
 const { ethers } = require('ethers');
-const fs = require('fs').promises;
-const path = require('path');
+const fs = require('fs/promises');
 const { createLogger } = require('../utils/logger');
 const { ContractError, ValidationError } = require('../utils/errors');
 const BlockchainValidator = require('../utils/validators');
@@ -75,6 +74,16 @@ class ContractManager {
    */
   async _readArtifact(artifactPath) {
     try {
+      if (typeof global.__CONTRACT_ARTIFACT_LOADER__ === 'function') {
+        const injectedArtifact = await global.__CONTRACT_ARTIFACT_LOADER__(artifactPath);
+        if (injectedArtifact) {
+          if (!injectedArtifact.abi) {
+            throw new Error('Artifact does not contain ABI');
+          }
+          return injectedArtifact;
+        }
+      }
+
       const data = await fs.readFile(artifactPath, 'utf8');
       const artifact = JSON.parse(data);
 
@@ -273,7 +282,7 @@ class ContractManager {
       // Estimate gas if not provided
       if (!options.gasLimit) {
         const gasEstimate = await this.estimateGas(method, params, options, contractId);
-        options.gasLimit = BigInt(Math.floor(Number(gasEstimate) * 1.2)); // Add 20% buffer
+        options.gasLimit = Math.floor(Number(gasEstimate) * 1.2); // Add 20% buffer
       }
 
       // Send transaction

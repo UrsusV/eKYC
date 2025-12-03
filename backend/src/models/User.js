@@ -301,7 +301,7 @@ userSchema.pre('save', async function(next) {
 userSchema.pre('save', function(next) {
     if (!this.isModified('password') || this.isNew) return next();
 
-    this.passwordChangedAt = Date.now() - 1000;
+    this.passwordChangedAt = new Date(Date.now() - 1000);
     next();
 });
 
@@ -334,28 +334,38 @@ userSchema.methods.createPasswordResetToken = function() {
 };
 
 // Instance Method: Increment Login Attempts
-userSchema.methods.incLoginAttempts = function() {
+userSchema.methods.incLoginAttempts = async function() {
     if (this.lockUntil && this.lockUntil < Date.now()) {
-        return this.updateOne({
+        await this.updateOne({
             $set: { loginAttempts: 1 },
             $unset: { lockUntil: 1 }
         });
+        this.loginAttempts = 1;
+        this.lockUntil = undefined;
+        return;
     }
 
+    const previousAttempts = this.loginAttempts || 0;
+    const nextAttempts = previousAttempts + 1;
     const updates = { $inc: { loginAttempts: 1 } };
 
     const maxAttempts = 5;
     const lockTime = 2 * 60 * 60 * 1000;
 
-    if (this.loginAttempts + 1 >= maxAttempts && !this.isLocked) {
-        updates.$set = { lockUntil: Date.now() + lockTime };
+    if (nextAttempts >= maxAttempts && !this.isLocked) {
+        const lockUntil = new Date(Date.now() + lockTime);
+        updates.$set = { lockUntil };
+        this.lockUntil = lockUntil;
     }
 
-    return this.updateOne(updates);
+    await this.updateOne(updates);
+    this.loginAttempts = nextAttempts;
 };
 
 // Instance Method: Reset Login Attempts
 userSchema.methods.resetLoginAttempts = function() {
+    this.loginAttempts = 0;
+    this.lockUntil = undefined;
     return this.updateOne({
         $set: { loginAttempts: 0 },
         $unset: { lockUntil: 1 }

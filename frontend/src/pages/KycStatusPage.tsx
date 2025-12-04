@@ -178,7 +178,9 @@ export const KycStatusPage: React.FC = () => {
                 Full Name
               </p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {request.fullName}
+                {request.fullName ||
+                 request.submissionDetails?.nidData?.full_name ||
+                 "N/A"}
               </p>
             </div>
             <div>
@@ -186,7 +188,9 @@ export const KycStatusPage: React.FC = () => {
                 Date of Birth
               </p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {request.dateOfBirth}
+                {request.dateOfBirth ||
+                 request.submissionDetails?.nidData?.date_of_birth ||
+                 "N/A"}
               </p>
             </div>
             <div>
@@ -194,7 +198,7 @@ export const KycStatusPage: React.FC = () => {
                 Nationality
               </p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {request.nationality}
+                {request.nationality || "N/A"}
               </p>
             </div>
           </div>
@@ -214,7 +218,11 @@ export const KycStatusPage: React.FC = () => {
                 Document Type
               </p>
               <p className="font-medium text-gray-900 dark:text-white capitalize">
-                {request.documentType.replace("_", " ")}
+                {request.documentType
+                  ? request.documentType.replace("_", " ")
+                  : request.submissionDetails?.nidData?.nid_number
+                    ? "National ID"
+                    : "N/A"}
               </p>
             </div>
             <div>
@@ -222,7 +230,9 @@ export const KycStatusPage: React.FC = () => {
                 Document Number
               </p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {request.documentNumber}
+                {request.documentNumber ||
+                 request.submissionDetails?.nidData?.nid_number ||
+                 "N/A"}
               </p>
             </div>
             <div>
@@ -252,42 +262,52 @@ export const KycStatusPage: React.FC = () => {
               Address Information
             </h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {request.address && typeof request.address === 'object' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Street</p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {request.address.street || "N/A"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">City</p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {request.address.city || "N/A"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">State</p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {request.address.state || "N/A"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Zip Code
+                </p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {request.address.zipCode || "N/A"}
+                </p>
+              </div>
+              <div className="md:col-span-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Country
+                </p>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {request.address.country || "N/A"}
+                </p>
+              </div>
+            </div>
+          ) : (
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Street</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Address</p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {request.address.street}
+                {request.submissionDetails?.nidData?.address ||
+                 (typeof request.address === 'string' ? request.address : "N/A")}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">City</p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {request.address.city}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">State</p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {request.address.state}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Zip Code
-              </p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {request.address.zipCode}
-              </p>
-            </div>
-            <div className="md:col-span-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Country
-              </p>
-              <p className="font-medium text-gray-900 dark:text-white">
-                {request.address.country}
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

@@ -85,18 +85,18 @@ export interface KycRequest {
     | "rejected"
     | "expired"
     | "cancelled";
-  documentType: "passport" | "national_id" | "drivers_license";
-  documentNumber: string;
-  fullName: string;
-  dateOfBirth: string;
-  nationality: string;
-  address: {
+  documentType?: "passport" | "national_id" | "drivers_license";
+  documentNumber?: string;
+  fullName?: string;
+  dateOfBirth?: string;
+  nationality?: string;
+  address?: {
     street: string;
     city: string;
     state: string;
     zipCode: string;
     country: string;
-  };
+  } | string; // Can be object or string from backend
   documents: Array<{
     documentId: string;
     documentType: string;

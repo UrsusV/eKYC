@@ -125,17 +125,49 @@ export interface KycRequest {
   workflow?: {
     submittedAt?: string;
     reviewStartedAt?: string;
+    reviewCompletedAt?: string;
     approvedAt?: string;
     rejectedAt?: string;
-    assignedTo?: string;
-    reviewedBy?: string;
-    approvedBy?: string;
+    assignedTo?: string | User;
+    reviewedBy?: string | User;
+    approvedBy?: string | User;
   };
+  submissionDetails?: {
+    nidData?: {
+      nid_number: string;
+      full_name: string;
+      date_of_birth: string;
+      address: string;
+      father_name?: string;
+      mother_name?: string;
+    };
+    ipAddress?: string;
+    userAgent?: string;
+    deviceType?: string;
+    location?: {
+      country?: string;
+      region?: string;
+      city?: string;
+    };
+  };
+  rejectionReason?: {
+    category: string;
+    details: string;
+    canReapply: boolean;
+    reapplyAfter?: string;
+  };
+  internalNotes?: Array<{
+    note: string;
+    addedBy: string | User;
+    addedAt: string;
+    isPrivate: boolean;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface SubmitKycRequest {
+// Internal form state (camelCase)
+export interface KycFormData {
   documentType: "passport" | "national_id" | "drivers_license";
   documentNumber: string;
   fullName: string;
@@ -148,9 +180,20 @@ export interface SubmitKycRequest {
     zipCode: string;
     country: string;
   };
-  documentFrontImage: string; // base64
-  documentBackImage: string; // base64
-  selfieImage: string; // base64
+  documentFrontImage?: string;
+  documentBackImage?: string;
+  selfieImage?: string;
+}
+
+// Backend API format (snake_case)
+export interface SubmitKycRequest {
+  nid_number: string;
+  full_name: string;
+  date_of_birth: string;
+  address: string; // Concatenated string format
+  father_name?: string;
+  mother_name?: string;
+  phone?: string;
 }
 
 // Credential Types

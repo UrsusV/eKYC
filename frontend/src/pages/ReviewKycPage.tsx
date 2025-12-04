@@ -22,6 +22,7 @@ export const ReviewKycPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [action, setAction] = useState<"approve" | "reject" | null>(null);
   const [notes, setNotes] = useState("");
+  const [rejectionCategory, setRejectionCategory] = useState<string>("");
 
   useEffect(() => {
     if (requestId) {
@@ -53,10 +54,15 @@ export const ReviewKycPage: React.FC = () => {
       return;
     }
 
+    if (action === "reject" && !rejectionCategory) {
+      setError("Please select a rejection category");
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
-      await bankService.verifyKyc(requestId, action, notes);
+      await bankService.verifyKyc(requestId, action, notes, rejectionCategory);
       navigate("/officer/kyc-queue");
     } catch (err: any) {
       console.error("Failed to submit review:", err);
@@ -93,10 +99,7 @@ export const ReviewKycPage: React.FC = () => {
 
   if (!request) return null;
 
-  const canReview =
-    request.status === "pending" ||
-    request.status === "submitted" ||
-    request.status === "under_review";
+  const canReview = request.status === "under_review";
 
   return (
     <div className="space-y-6">
@@ -313,6 +316,29 @@ export const ReviewKycPage: React.FC = () => {
               </div>
             </div>
 
+            {action === "reject" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Rejection Category *
+                </label>
+                <select
+                  value={rejectionCategory}
+                  onChange={(e) => setRejectionCategory(e.target.value)}
+                  className="input w-full"
+                >
+                  <option value="">Select a category</option>
+                  <option value="incomplete_documents">Incomplete Documents</option>
+                  <option value="invalid_documents">Invalid Documents</option>
+                  <option value="failed_verification">Failed Verification</option>
+                  <option value="high_risk">High Risk</option>
+                  <option value="aml_concerns">AML Concerns</option>
+                  <option value="duplicate_account">Duplicate Account</option>
+                  <option value="ineligible">Ineligible</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Review Notes *
@@ -357,7 +383,9 @@ export const ReviewKycPage: React.FC = () => {
       {!canReview && (
         <div className="card bg-gray-50 dark:bg-gray-800">
           <p className="text-center text-gray-600 dark:text-gray-400">
-            This request has already been reviewed and cannot be modified.
+            {request.status === "approved" || request.status === "rejected" || request.status === "cancelled"
+              ? "This request has already been reviewed and cannot be modified."
+              : `This request cannot be reviewed yet. Current status: ${request.status}. The request must be in "under_review" status before approval or rejection.`}
           </p>
         </div>
       )}

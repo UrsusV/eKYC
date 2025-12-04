@@ -33,9 +33,11 @@ export const OfficerDashboardPage: React.FC = () => {
       // Fetch all KYC requests
       const response = await bankService.getKycRequests({
         status: "all",
-        limit: 1000,
+        limit: 100,
       });
-      const requests = (response.data || []) as any[];
+
+      // Backend returns data in format: { data: { requests: [...], pagination: {...} } }
+      const requests = ((response.data as any)?.requests || response.data || []) as any[];
 
       // Calculate stats
       const pending = requests.filter(
@@ -66,7 +68,13 @@ export const OfficerDashboardPage: React.FC = () => {
       });
     } catch (err: any) {
       console.error("Failed to load dashboard data:", err);
-      setError(err.response?.data?.message || "Failed to load dashboard data");
+      console.error("Error details:", {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        debug: err.response?.data?.debug
+      });
+      const errorMsg = err.response?.data?.message || "Failed to load dashboard data";
+      setError(`${errorMsg}${err.response?.status === 403 ? " (Access Denied - Check if you're logged in as bank officer)" : ""}`);
     } finally {
       setLoading(false);
     }

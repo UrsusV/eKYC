@@ -59,6 +59,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initAuth();
+
+    // Listen for storage changes (user logged in/out in another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "accessToken" || e.key === "user") {
+        // Token or user changed in another tab
+        console.warn("Auth state changed in another tab, reloading page...");
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   const login = async (credentials: LoginRequest) => {

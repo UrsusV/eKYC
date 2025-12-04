@@ -8,11 +8,11 @@ const Bank = require('../models/Bank');
  */
 const STATUS_TRANSITIONS = {
     draft: ['submitted', 'cancelled'],
-    submitted: ['pending', 'rejected', 'cancelled'],
-    pending: ['under_review', 'cancelled'],
+    submitted: ['pending', 'under_review', 'approved', 'rejected', 'cancelled'],
+    pending: ['under_review', 'approved', 'rejected', 'cancelled'],
     under_review: ['approved', 'rejected', 'additional_info_required', 'document_verification'],
-    document_verification: ['under_review', 'additional_info_required', 'rejected'],
-    additional_info_required: ['under_review', 'cancelled'],
+    document_verification: ['under_review', 'additional_info_required', 'approved', 'rejected'],
+    additional_info_required: ['under_review', 'approved', 'rejected', 'cancelled'],
     approved: ['issued', 'expired'],
     issued: ['expired'],
     rejected: [],

@@ -448,6 +448,37 @@ exports.getMe = async (req, res) => {
 };
 
 /**
+ * @desc    Get list of active banks (for bank officer registration)
+ * @route   GET /api/v1/auth/banks
+ * @access  Public
+ */
+exports.getBanks = async (req, res) => {
+    try {
+        const banks = await Bank.find({ isActive: true })
+            .select('_id bankName bankCode bankType')
+            .sort({ bankName: 1 });
+
+        res.status(200).json({
+            success: true,
+            message: 'Banks retrieved successfully',
+            data: banks.map(bank => ({
+                id: bank._id,
+                name: bank.bankName,
+                code: bank.bankCode,
+                type: bank.bankType
+            }))
+        });
+    } catch (error) {
+        console.error('Get banks error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error retrieving banks',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+/**
  * @desc    Logout user
  * @route   POST /api/v1/auth/logout
  * @access  Private

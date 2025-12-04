@@ -14,8 +14,9 @@ import { KycRequest } from "@/types";
 import { getStatusColor } from "@/utils";
 
 export const ReviewKycPage: React.FC = () => {
-  const { requestId } = useParams<{ requestId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const requestId = id;
   const [request, setRequest] = useState<KycRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +67,14 @@ export const ReviewKycPage: React.FC = () => {
       navigate("/officer/kyc-queue");
     } catch (err: any) {
       console.error("Failed to submit review:", err);
-      setError(err.response?.data?.message || "Failed to submit review");
+      console.error("Error response:", err.response?.data);
+      const errorMsg = err.response?.data?.message || "Failed to submit review";
+      const validationErrors = err.response?.data?.errors;
+      if (validationErrors && Array.isArray(validationErrors)) {
+        setError(`${errorMsg}: ${validationErrors.map((e: any) => e.message).join(", ")}`);
+      } else {
+        setError(errorMsg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -99,7 +107,10 @@ export const ReviewKycPage: React.FC = () => {
 
   if (!request) return null;
 
-  const canReview = request.status === "under_review";
+  // Allow review if not already approved, rejected, cancelled, or expired
+  const canReview = !["approved", "rejected", "cancelled", "expired"].includes(
+    request.status
+  );
 
   return (
     <div className="space-y-6">
@@ -186,7 +197,7 @@ export const ReviewKycPage: React.FC = () => {
                 Document Type
               </p>
               <p className="font-medium text-gray-900 dark:text-white capitalize">
-                {request.documentType.replace("_", " ")}
+                {request.documentType?.replace("_", " ") || "N/A"}
               </p>
             </div>
             <div>
@@ -220,19 +231,19 @@ export const ReviewKycPage: React.FC = () => {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">Street</p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {request.address.street}
+                {typeof request.address === 'object' ? request.address?.street : request.address || 'N/A'}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">City</p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {request.address.city}
+                {typeof request.address === 'object' ? request.address?.city : 'N/A'}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400">State</p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {request.address.state}
+                {typeof request.address === 'object' ? request.address?.state : 'N/A'}
               </p>
             </div>
             <div>
@@ -240,7 +251,7 @@ export const ReviewKycPage: React.FC = () => {
                 Zip Code
               </p>
               <p className="font-medium text-gray-900 dark:text-white">
-                {request.address.zipCode}
+                {typeof request.address === 'object' ? request.address?.zipCode : 'N/A'}
               </p>
             </div>
           </div>

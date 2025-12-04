@@ -58,6 +58,24 @@ router.use(authenticate);
 router.use(authorize('bank_officer'));
 
 /**
+ * @route   GET /api/v1/bank/debug/me
+ * @desc    Debug endpoint to check bank officer info
+ * @access  Private (Bank Officer only)
+ */
+router.get('/debug/me', (req, res) => {
+    res.json({
+        success: true,
+        data: {
+            userId: req.user._id,
+            email: req.user.email,
+            role: req.user.role,
+            bankOfficerInfo: req.user.bankOfficerInfo,
+            hasBankId: !!req.user.bankOfficerInfo?.bankId
+        }
+    });
+});
+
+/**
  * @route   GET /api/v1/bank/kyc-requests
  * @desc    Get KYC requests for bank officer's bank (with filtering and pagination)
  * @access  Private (Bank Officer only)

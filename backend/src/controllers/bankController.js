@@ -35,9 +35,20 @@ exports.getKycRequests = async (req, res) => {
 
         // Verify bank officer has bank association
         if (!bankOfficer.bankOfficerInfo || !bankOfficer.bankOfficerInfo.bankId) {
+            console.error('Bank officer missing bank association:', {
+                userId: bankOfficer._id,
+                email: bankOfficer.email,
+                role: bankOfficer.role,
+                hasBankOfficerInfo: !!bankOfficer.bankOfficerInfo,
+                bankId: bankOfficer.bankOfficerInfo?.bankId
+            });
             return res.status(400).json({
                 success: false,
-                message: 'Bank officer is not associated with any bank'
+                message: 'Bank officer is not associated with any bank',
+                debug: process.env.NODE_ENV === 'development' ? {
+                    hasBankOfficerInfo: !!bankOfficer.bankOfficerInfo,
+                    bankId: bankOfficer.bankOfficerInfo?.bankId
+                } : undefined
             });
         }
 
@@ -57,7 +68,7 @@ exports.getKycRequests = async (req, res) => {
         const requests = await KycRequest.find(query)
             .populate('userId', 'email personalInfo.fullName personalInfo.nid contactInfo.primaryPhone')
             .populate('workflow.assignedTo', 'personalInfo.fullName')
-            .select('requestId status kycLevel createdAt userId workflow submissionDetails bankId')
+            .select('requestId status kycLevel createdAt userId workflow submissionDetails bankId documentType')
             .sort({ createdAt: -1 })
             .limit(limit)
             .skip(skip);
@@ -69,12 +80,16 @@ exports.getKycRequests = async (req, res) => {
         const formattedRequests = requests.map(req => ({
             _id: req._id,
             requestId: req.requestId,
-            bankId: req.bankId.toString(), // Include bankId for testing
+            bankId: req.bankId.toString(),
+            fullName: req.userId?.personalInfo?.fullName || 'N/A',
             customerName: req.userId?.personalInfo?.fullName || 'N/A',
+            documentNumber: req.submissionDetails?.nidData?.nid_number || req.userId?.personalInfo?.nid || 'N/A',
             nidNumber: req.submissionDetails?.nidData?.nid_number || req.userId?.personalInfo?.nid || 'N/A',
+            documentType: req.documentType || 'nid',
             email: req.userId?.email,
             phone: req.userId?.contactInfo?.primaryPhone,
             submissionDate: req.createdAt,
+            createdAt: req.createdAt,
             status: req.status,
             kycLevel: req.kycLevel,
             assignedTo: req.workflow?.assignedTo?.personalInfo?.fullName

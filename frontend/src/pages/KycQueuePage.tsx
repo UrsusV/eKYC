@@ -10,7 +10,7 @@ export const KycQueuePage: React.FC = () => {
   const [requests, setRequests] = useState<KycRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("pending");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -25,10 +25,21 @@ export const KycQueuePage: React.FC = () => {
         status: statusFilter,
         limit: 100,
       });
-      setRequests((response.data || []) as KycRequest[]);
+
+      console.log("KYC Queue response:", response);
+
+      // Backend returns data in format: { data: { requests: [...], pagination: {...} } }
+      const requestsData = (response.data as any)?.requests || response.data || [];
+      setRequests(requestsData as KycRequest[]);
     } catch (err: any) {
       console.error("Failed to load KYC queue:", err);
-      setError(err.response?.data?.message || "Failed to load KYC queue");
+      console.error("Error details:", {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        debug: err.response?.data?.debug
+      });
+      const errorMsg = err.response?.data?.message || "Failed to load KYC queue";
+      setError(`${errorMsg}${err.response?.status === 403 ? " (Access Denied - Check if you're logged in as bank officer)" : ""}`);
     } finally {
       setLoading(false);
     }
@@ -114,9 +125,9 @@ export const KycQueuePage: React.FC = () => {
         {filteredRequests.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
-              {searchTerm || statusFilter !== "pending"
+              {searchTerm || statusFilter !== "all"
                 ? "No requests match your search criteria."
-                : "No pending requests at this time."}
+                : "No KYC requests at this time."}
             </p>
           </div>
         ) : (
@@ -160,7 +171,7 @@ export const KycQueuePage: React.FC = () => {
                       {request.fullName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300 capitalize">
-                      {request.documentType.replace("_", " ")}
+                      {request.documentType?.replace("_", " ") || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-300">
                       Level {request.kycLevel}
@@ -179,7 +190,7 @@ export const KycQueuePage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <Link
-                        to={`/officer/review/${request._id}`}
+                        to={`/officer/kyc-request/${request._id}`}
                         className="inline-flex items-center space-x-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
                       >
                         <Eye className="w-4 h-4" />

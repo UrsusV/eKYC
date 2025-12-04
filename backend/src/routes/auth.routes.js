@@ -6,7 +6,8 @@ const {
     login,
     refreshToken,
     getMe,
-    logout
+    logout,
+    getBanks
 } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 
@@ -67,6 +68,7 @@ router.get('/', (req, res) => {
     res.json({
         message: 'Authentication API',
         endpoints: {
+            getBanks: 'GET /api/v1/auth/banks',
             registerCustomer: 'POST /api/v1/auth/register/customer',
             registerBankOfficer: 'POST /api/v1/auth/register/bank-officer',
             login: 'POST /api/v1/auth/login',
@@ -76,6 +78,13 @@ router.get('/', (req, res) => {
         }
     });
 });
+
+/**
+ * @route   GET /api/v1/auth/banks
+ * @desc    Get list of active banks (for bank officer registration)
+ * @access  Public
+ */
+router.get('/banks', getBanks);
 
 /**
  * @route   POST /api/v1/auth/register/customer

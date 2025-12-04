@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -12,6 +12,14 @@ import {
 } from "lucide-react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { handleApiError, validateEmail, validatePassword } from "@/utils";
+import { apiClient } from "@/services/apiClient";
+
+interface Bank {
+  id: string;
+  name: string;
+  code: string;
+  type: string;
+}
 
 const RegisterBankOfficerPage: React.FC = () => {
   const navigate = useNavigate();
@@ -22,13 +30,35 @@ const RegisterBankOfficerPage: React.FC = () => {
     confirmPassword: "",
     firstName: "",
     lastName: "",
-    bankName: "",
+    bank_id: "",
     officer_id: "",
     branch: "",
   });
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Fetch available banks on component mount
+  useEffect(() => {
+    const fetchBanks = async () => {
+      setLoadingBanks(true);
+      try {
+        const response = await apiClient.get<Bank[]>("/auth/banks");
+        if (response.success && response.data) {
+          setBanks(response.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch banks:", err);
+        setError("Failed to load banks. Please refresh the page.");
+      } finally {
+        setLoadingBanks(false);
+      }
+    };
+
+    fetchBanks();
+  }, []);
 
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
@@ -66,8 +96,8 @@ const RegisterBankOfficerPage: React.FC = () => {
     }
 
     // Bank officer specific validation
-    if (!formData.bankName.trim()) {
-      errors.bankName = "Bank name is required";
+    if (!formData.bank_id.trim()) {
+      errors.bank_id = "Please select a bank";
     }
     if (!formData.officer_id.trim()) {
       errors.officer_id = "Officer ID is required";
@@ -91,25 +121,43 @@ const RegisterBankOfficerPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // For now, use a placeholder bank_id - in production this would come from a bank selection
-      // The backend will create/find the bank based on the name
-      const { confirmPassword, firstName, lastName, bankName, ...rest } =
-        formData;
-
-      // Create a temporary bank_id (24 character hex string) - this is a workaround
-      // In production, you'd fetch the actual bank_id from an API or have a dropdown
-      const tempBankId = "507f1f77bcf86cd799439011"; // Valid MongoDB ObjectId format
+      const { confirmPassword, firstName, lastName, branch, ...rest } = formData;
 
       const registrationData = {
-        ...rest,
+        email: rest.email,
+        password: rest.password,
+        bank_id: rest.bank_id,
+        officer_id: rest.officer_id,
         name: `${firstName} ${lastName}`.trim(),
-        bank_id: tempBankId,
       };
+
+      console.log("Sending registration data:", registrationData);
 
       await registerBankOfficer(registrationData);
       navigate("/officer/dashboard");
-    } catch (err) {
-      setError(handleApiError(err));
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      console.error("Error response data:", err?.response?.data);
+      console.error("Error response status:", err?.response?.status);
+
+      // Check if the error response contains field-specific errors
+      if (err?.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        const backendErrors: Record<string, string> = {};
+        err.response.data.errors.forEach((error: any) => {
+          if (error.field && error.message) {
+            backendErrors[error.field] = error.message;
+          }
+        });
+
+        if (Object.keys(backendErrors).length > 0) {
+          setFieldErrors(backendErrors);
+          setError("Please fix the validation errors below");
+        } else {
+          setError(handleApiError(err));
+        }
+      } else {
+        setError(handleApiError(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -225,25 +273,39 @@ const RegisterBankOfficerPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Bank Name */}
+            {/* Bank Selection */}
             <div>
               <label className="label">
                 <Building className="h-4 w-4 inline mr-2" />
-                Bank Name *
+                Bank *
               </label>
-              <input
-                type="text"
-                value={formData.bankName}
-                onChange={handleChange("bankName")}
-                className={`input ${
-                  fieldErrors.bankName ? "border-red-500" : ""
-                }`}
-                placeholder="National Bank of Bangladesh"
-                required
-              />
-              {fieldErrors.bankName && (
+              {loadingBanks ? (
+                <div className="flex items-center justify-center py-2">
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                    Loading banks...
+                  </span>
+                </div>
+              ) : (
+                <select
+                  value={formData.bank_id}
+                  onChange={handleChange("bank_id")}
+                  className={`input ${
+                    fieldErrors.bank_id ? "border-red-500" : ""
+                  }`}
+                  required
+                >
+                  <option value="">Select a bank</option>
+                  {banks.map((bank) => (
+                    <option key={bank.id} value={bank.id}>
+                      {bank.name} ({bank.code})
+                    </option>
+                  ))}
+                </select>
+              )}
+              {fieldErrors.bank_id && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {fieldErrors.bankName}
+                  {fieldErrors.bank_id}
                 </p>
               )}
             </div>

@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { kycService } from "@/services/kycService";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { SubmitKycRequest } from "@/types";
+import { KycFormData, SubmitKycRequest } from "@/types";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -20,7 +20,7 @@ export const SubmitKycPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [formData, setFormData] = useState<Partial<SubmitKycRequest>>({
+  const [formData, setFormData] = useState<Partial<KycFormData>>({
     documentType: "national_id",
     documentNumber: "",
     fullName: "",
@@ -72,8 +72,15 @@ export const SubmitKycPage: React.FC = () => {
     if (step === 1) {
       if (!formData.documentType)
         newErrors.documentType = "Document type is required";
-      if (!formData.documentNumber)
+      if (!formData.documentNumber) {
         newErrors.documentNumber = "Document number is required";
+      } else {
+        // Validate NID number format (must be 10, 13, or 17 digits)
+        const nidPattern = /^\d{10}$|^\d{13}$|^\d{17}$/;
+        if (!nidPattern.test(formData.documentNumber.trim())) {
+          newErrors.documentNumber = "NID number must be exactly 10, 13, or 17 digits";
+        }
+      }
     } else if (step === 2) {
       if (!formData.fullName) newErrors.fullName = "Full name is required";
       if (!formData.dateOfBirth)
@@ -87,6 +94,14 @@ export const SubmitKycPage: React.FC = () => {
         newErrors["address.city"] = "City is required";
       if (!formData.address?.zipCode)
         newErrors["address.zipCode"] = "Zip code is required";
+
+      // Validate address length (backend requires min 10 characters)
+      if (formData.address) {
+        const addressString = `${formData.address.street}, ${formData.address.city}, ${formData.address.state} ${formData.address.zipCode}, ${formData.address.country}`;
+        if (addressString.length < 10) {
+          newErrors["address.street"] = "Please provide a complete address (at least 10 characters)";
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -125,17 +140,89 @@ export const SubmitKycPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const result = await kycService.submitKyc(formData as SubmitKycRequest);
+
+      // Transform form data to match backend API format
+      const addressString = formData.address
+        ? `${formData.address.street}, ${formData.address.city}, ${formData.address.state} ${formData.address.zipCode}, ${formData.address.country}`
+        : '';
+
+      // Validate address length (backend requires min 10 characters)
+      if (addressString.length < 10) {
+        setErrors({
+          submit: "Address must be at least 10 characters long. Please provide a complete address.",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Validate NID number format (must be 10, 13, or 17 digits)
+      const nidNumber = formData.documentNumber?.trim() || '';
+      const nidPattern = /^\d{10}$|^\d{13}$|^\d{17}$/;
+      if (!nidPattern.test(nidNumber)) {
+        setErrors({
+          submit: "NID number must be exactly 10, 13, or 17 digits.",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Build submission data - only include optional fields if they have values
+      const submissionData: SubmitKycRequest = {
+        nid_number: nidNumber,
+        full_name: formData.fullName?.trim() || '',
+        date_of_birth: formData.dateOfBirth || '',
+        address: addressString.trim(),
+      };
+
+      // Only add optional fields if they have values (not empty strings)
+      // This prevents validation errors for optional fields
+
+      const result = await kycService.submitKyc(submissionData);
       console.log("KYC submitted successfully:", result);
       navigate("/kyc/status");
     } catch (error: any) {
       console.error("Failed to submit KYC:", error);
-      setErrors({
-        submit:
-          error.response?.data?.message ||
-          error.message ||
-          "Failed to submit KYC request",
-      });
+
+      // Handle validation errors from backend
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        const validationErrors: Record<string, string> = {};
+        // Map backend field names (snake_case) to frontend field names (camelCase)
+        const fieldMapping: Record<string, string> = {
+          'nid_number': 'documentNumber',
+          'full_name': 'fullName',
+          'date_of_birth': 'dateOfBirth',
+          'address': 'submit', // Address is concatenated, show error in submit area
+          'father_name': 'submit',
+          'mother_name': 'submit',
+          'phone': 'submit'
+        };
+
+        error.response.data.errors.forEach((err: { field: string; message: string }) => {
+          const frontendField = fieldMapping[err.field] || err.field;
+          if (frontendField === 'submit') {
+            // For optional fields, show in submit error
+            validationErrors.submit = validationErrors.submit
+              ? `${validationErrors.submit}; ${err.message}`
+              : err.message;
+          } else {
+            validationErrors[frontendField] = err.message;
+          }
+        });
+
+        // If no specific field errors, show general message
+        if (Object.keys(validationErrors).length === 0) {
+          validationErrors.submit = error.response?.data?.message || "Validation failed";
+        }
+
+        setErrors(validationErrors);
+      } else {
+        setErrors({
+          submit:
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to submit KYC request",
+        });
+      }
     } finally {
       setLoading(false);
     }

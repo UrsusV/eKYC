@@ -59,6 +59,25 @@ const loginRateLimiter = conditionalMiddleware(rateLimit({
 }));
 
 /**
+ * @route   GET /api/v1/auth
+ * @desc    Get authentication endpoints information
+ * @access  Public
+ */
+router.get('/', (req, res) => {
+    res.json({
+        message: 'Authentication API',
+        endpoints: {
+            registerCustomer: 'POST /api/v1/auth/register/customer',
+            registerBankOfficer: 'POST /api/v1/auth/register/bank-officer',
+            login: 'POST /api/v1/auth/login',
+            refresh: 'POST /api/v1/auth/refresh',
+            me: 'GET /api/v1/auth/me',
+            logout: 'POST /api/v1/auth/logout'
+        }
+    });
+});
+
+/**
  * @route   POST /api/v1/auth/register/customer
  * @desc    Register a new customer
  * @access  Public

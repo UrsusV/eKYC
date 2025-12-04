@@ -40,13 +40,15 @@ class BankService {
   async verifyKyc(
     requestId: string,
     action: "approve" | "reject",
-    notes: string
+    notes: string,
+    rejectionCategory?: string
   ): Promise<KycRequest> {
     const response = await apiClient.post<KycRequest>(
       `/bank/verify/${requestId}`,
       {
-        action,
-        verificationNotes: notes,
+        approved: action === "approve",
+        comments: notes,
+        ...(rejectionCategory && { rejectionCategory }),
       }
     );
 

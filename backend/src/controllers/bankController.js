@@ -336,15 +336,78 @@ exports.issueCredential = async (req, res) => {
 
         // Initialize if not already initialized
         if (!credentialService.isInitialized) {
-            await credentialService.initialize();
+            try {
+                await credentialService.initialize();
+            } catch (initError) {
+                console.error('Blockchain service initialization failed:', initError);
+
+                // Add internal note about initialization failure
+                kycRequest.internalNotes.push({
+                    note: `Blockchain service initialization failed: ${initError.message}. KYC approved but credential issuance pending.`,
+                    addedBy: bankOfficer._id,
+                    addedAt: new Date(),
+                    isPrivate: true
+                });
+                await kycRequest.save();
+
+                return res.status(500).json({
+                    success: false,
+                    message: 'Blockchain service is unavailable. KYC is approved but credential cannot be issued at this time. Please retry later.',
+                    error: process.env.NODE_ENV === 'development' ? initError.message : undefined,
+                    data: {
+                        kycRequest: {
+                            _id: kycRequest._id,
+                            requestId: kycRequest.requestId,
+                            status: 'approved'
+                        }
+                    }
+                });
+            }
         }
 
-        const blockchainResult = await credentialService.issueCredential(
-            credentialHash,
-            kycRequest.userId.walletAddress,
-            2, // Credential type 2 = KYC
-            { useQueue: false } // Execute immediately for synchronous response
-        );
+        let blockchainResult;
+        try {
+            blockchainResult = await credentialService.issueCredential(
+                credentialHash,
+                kycRequest.userId.walletAddress,
+                2, // Credential type 2 = KYC
+                { useQueue: false } // Execute immediately for synchronous response
+            );
+
+            // Verify blockchain result has required fields
+            if (!blockchainResult || !blockchainResult.transactionHash) {
+                throw new Error('Invalid blockchain response: missing transaction hash');
+            }
+
+            if (!blockchainResult.credentialId) {
+                throw new Error('Invalid blockchain response: missing credential ID');
+            }
+
+        } catch (blockchainError) {
+            console.error('Blockchain credential issuance failed:', blockchainError);
+
+            // Add internal note about blockchain failure
+            kycRequest.internalNotes.push({
+                note: `Blockchain credential issuance failed: ${blockchainError.message}. KYC approved but on-chain credential not created.`,
+                addedBy: bankOfficer._id,
+                addedAt: new Date(),
+                isPrivate: true
+            });
+            await kycRequest.save();
+
+            return res.status(500).json({
+                success: false,
+                message: 'KYC approved successfully, but blockchain credential issuance failed. Please retry credential issuance.',
+                error: process.env.NODE_ENV === 'development' ? blockchainError.message : undefined,
+                data: {
+                    kycRequest: {
+                        _id: kycRequest._id,
+                        requestId: kycRequest.requestId,
+                        status: 'approved'
+                    }
+                }
+            });
+        }
 
         // Calculate expiry date (1 year from now)
         const expiryDate = new Date();

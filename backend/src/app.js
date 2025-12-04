@@ -111,6 +111,21 @@ app.use(`/api/${apiVersion}/consent`, consentRoutes);
 // app.use(`/api/${apiVersion}/credentials`, credentialRoutes);
 // app.use(`/api/${apiVersion}/admin`, adminRoutes);
 
+// API root endpoint
+app.get(`/api/${apiVersion}`, (req, res) => {
+    res.json({
+        message: 'eKYC Blockchain API',
+        version: apiVersion,
+        status: 'running',
+        endpoints: {
+            auth: `/api/${apiVersion}/auth`,
+            kyc: `/api/${apiVersion}/kyc`,
+            bank: `/api/${apiVersion}/bank`,
+            consent: `/api/${apiVersion}/consent`
+        }
+    });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.status(200).json({

@@ -169,18 +169,12 @@ export const OfficerDashboardPage: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
             to="/officer/kyc-requests"
             className="btn btn-primary text-center"
           >
             View KYC Queue
-          </Link>
-          <Link
-            to="/officer/issue-credential"
-            className="btn btn-secondary text-center"
-          >
-            Issue Credential
           </Link>
           <Link to="/profile" className="btn btn-secondary text-center">
             My Profile

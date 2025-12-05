@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { ethers } = require('ethers');
 const User = require('../models/User');
 const Bank = require('../models/Bank');
 const { registerCustomerSchema, registerBankOfficerSchema, loginSchema } = require('../validators/authValidators');
@@ -115,11 +116,18 @@ exports.registerCustomer = async (req, res) => {
             }
         }
 
+        // Generate wallet address for the user
+        const wallet = ethers.Wallet.createRandom();
+        const walletAddress = wallet.address;
+
+        console.log(`🔑 Generated wallet address for new user: ${walletAddress}`);
+
         // Create user
         const user = await User.create({
             email: email.toLowerCase(),
             password,
             role: 'customer',
+            walletAddress: walletAddress,
             personalInfo: {
                 fullName: name,
                 nid: nid_number,

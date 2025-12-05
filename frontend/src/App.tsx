@@ -36,7 +36,6 @@ import {
   OfficerDashboardPage,
   KycQueuePage,
   ReviewKycPage,
-  IssueCredentialPage,
 } from "@/pages";
 
 // Components
@@ -175,16 +174,6 @@ function App() {
           <PrivateRoute allowedRoles={["bank_officer"]}>
             <Layout>
               <ReviewKycPage />
-            </Layout>
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/officer/issue-credential/:requestId"
-        element={
-          <PrivateRoute allowedRoles={["bank_officer"]}>
-            <Layout>
-              <IssueCredentialPage />
             </Layout>
           </PrivateRoute>
         }

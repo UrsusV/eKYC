@@ -239,10 +239,218 @@ exports.verifyKycRequest = async (req, res) => {
             options
         );
 
+        // If approved, automatically issue credential
+        let credentialData = null;
+        if (approved) {
+            console.log('🎯 KYC APPROVED - Starting automatic credential issuance for request:', requestId);
+            try {
+                // Get updated KYC request with user details
+                const updatedKycRequest = await KycRequest.findById(requestId)
+                    .populate('userId', 'walletAddress personalInfo');
+
+                if (!updatedKycRequest) {
+                    throw new Error('KYC request not found after approval');
+                }
+
+                // Check if user already has a credential (for any previous KYC)
+                const existingCredential = await Credential.findOne({
+                    userId: updatedKycRequest.userId._id,
+                    status: 'active',
+                    credentialType: 'identity_verification'
+                });
+
+                if (existingCredential) {
+                    console.log(`✅ User ${updatedKycRequest.userId._id} already has an active credential (${existingCredential.credentialId}). Skipping issuance.`);
+
+                    // Add note to KYC request
+                    updatedKycRequest.internalNotes.push({
+                        note: `User already has an active credential (ID: ${existingCredential.credentialId}). No new credential issued.`,
+                        addedBy: bankOfficer._id,
+                        addedAt: new Date(),
+                        isPrivate: true
+                    });
+                    await updatedKycRequest.save();
+
+                    credentialData = {
+                        message: 'KYC approved. User already has an active credential.',
+                        existingCredential: {
+                            credentialId: existingCredential.credentialId,
+                            issuedAt: existingCredential.issuedAt,
+                            expiresAt: existingCredential.expiresAt
+                        }
+                    };
+                } else {
+                    // Check if credential already issued for this specific request
+                    if (updatedKycRequest.blockchain.issuedOnChain) {
+                        console.log(`Credential already issued for this KYC request ${requestId}`);
+                        credentialData = {
+                            message: 'Credential already issued for this request'
+                        };
+                    } else if (!updatedKycRequest.userId.walletAddress) {
+                        // User doesn't have a wallet address - log warning
+                        console.warn(`⚠️  User ${updatedKycRequest.userId._id} does not have a wallet address. Credential issuance skipped.`);
+
+                        updatedKycRequest.internalNotes.push({
+                            note: 'User does not have a wallet address. Credential issuance skipped. Please ask user to set up wallet.',
+                            addedBy: bankOfficer._id,
+                            addedAt: new Date(),
+                            isPrivate: true
+                        });
+                        await updatedKycRequest.save();
+
+                        credentialData = {
+                            message: 'KYC approved but credential not issued. User needs to set up wallet address.'
+                        };
+                    } else {
+                        // Issue new credential
+                        console.log(`🚀 Issuing NEW credential for KYC request ${requestId}`);
+
+                        // Generate credential hash from KYC data
+                        const credentialDataForHash = {
+                            requestId: updatedKycRequest.requestId,
+                            userId: updatedKycRequest.userId._id,
+                            nid: updatedKycRequest.userId.personalInfo?.nid,
+                            fullName: updatedKycRequest.userId.personalInfo?.fullName,
+                            kycLevel: updatedKycRequest.kycLevel,
+                            approvedAt: updatedKycRequest.workflow.approvedAt,
+                            approvedBy: updatedKycRequest.workflow.approvedBy
+                        };
+
+                        const credentialHash = crypto
+                            .createHash('sha256')
+                            .update(JSON.stringify(credentialDataForHash))
+                            .digest('hex');
+
+                        // Issue credential on blockchain
+                        const credentialService = getCredentialService();
+
+                        // Initialize if not already initialized
+                        if (!credentialService.isInitialized) {
+                            await credentialService.initialize();
+                        }
+
+                        const blockchainResult = await credentialService.issueCredential(
+                            credentialHash,
+                            updatedKycRequest.userId.walletAddress,
+                            2, // Credential type 2 = KYC
+                            { useQueue: false }
+                        );
+
+                        // Verify blockchain result
+                        if (!blockchainResult || !blockchainResult.transactionHash) {
+                            throw new Error('Invalid blockchain response: missing transaction hash');
+                        }
+
+                        if (!blockchainResult.credentialId) {
+                            throw new Error('Invalid blockchain response: missing credential ID');
+                        }
+
+                        // Calculate expiry date (1 year from now)
+                        const expiryDate = new Date();
+                        expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+
+                        // Create Credential record in database
+                        const credential = await Credential.create({
+                            userId: updatedKycRequest.userId._id,
+                            kycRequestId: updatedKycRequest._id,
+                            bankId: updatedKycRequest.bankId,
+                            issuedBy: bankOfficer._id,
+                            credentialType: 'identity_verification',
+                            blockchain: {
+                                credentialHash: credentialHash,
+                                transactionHash: blockchainResult.transactionHash,
+                                blockNumber: blockchainResult.blockNumber,
+                                holderAddress: updatedKycRequest.userId.walletAddress,
+                                issuerAddress: blockchainResult.issuerAddress || process.env.BLOCKCHAIN_ISSUER_ADDRESS || '0x0000000000000000000000000000000000000000',
+                                blockchainCredentialId: blockchainResult.credentialId,
+                                networkId: process.env.BLOCKCHAIN_NETWORK || 'localhost',
+                                gasUsed: blockchainResult.gasUsed
+                            },
+                            status: 'active',
+                            issuedAt: new Date(),
+                            expiresAt: expiryDate,
+                            credentialData: {
+                                documentType: 'kyc_verification',
+                                fullName: updatedKycRequest.userId.personalInfo?.fullName,
+                                dateOfBirth: updatedKycRequest.userId.personalInfo?.dateOfBirth,
+                                nationality: updatedKycRequest.userId.personalInfo?.nationality,
+                                kycLevel: updatedKycRequest.kycLevel
+                            },
+                            verificationProof: {
+                                verificationMethod: 'manual',
+                                verificationNotes: 'KYC approved by bank officer',
+                                documentsVerified: updatedKycRequest.documents?.map(doc => doc.documentType) || []
+                            }
+                        });
+
+                        // Update KYC request with blockchain details
+                        updatedKycRequest.blockchain = {
+                            credentialHash: credentialHash,
+                            transactionHash: blockchainResult.transactionHash,
+                            blockNumber: blockchainResult.blockNumber,
+                            issuedOnChain: true,
+                            issuedAt: new Date()
+                        };
+
+                        await updatedKycRequest.save();
+
+                        credentialData = {
+                            message: 'Credential issued successfully',
+                            credential: {
+                                _id: credential._id,
+                                credentialId: credential.credentialId,
+                                userId: credential.userId,
+                                kycRequestId: credential.kycRequestId,
+                                credentialType: credential.credentialType,
+                                status: credential.status,
+                                issuedAt: credential.issuedAt,
+                                expiresAt: credential.expiresAt
+                            },
+                            transaction: {
+                                transactionHash: blockchainResult.transactionHash,
+                                blockNumber: blockchainResult.blockNumber,
+                                blockchainCredentialId: blockchainResult.credentialId,
+                                gasUsed: blockchainResult.gasUsed
+                            }
+                        };
+
+                        console.log(`✅ Credential issued successfully for KYC request ${requestId}`, {
+                            credentialId: credential.credentialId,
+                            transactionHash: blockchainResult.transactionHash
+                        });
+                    }
+                }
+            } catch (credentialError) {
+                // Log error but don't fail the approval
+                console.error('❌ Automatic credential issuance failed:', credentialError);
+                console.error('Error stack:', credentialError.stack);
+
+                // Add internal note about the failure
+                const kycReq = await KycRequest.findById(requestId);
+                if (kycReq) {
+                    kycReq.internalNotes.push({
+                        note: `Automatic credential issuance failed: ${credentialError.message}. KYC approved but credential not issued.`,
+                        addedBy: bankOfficer._id,
+                        addedAt: new Date(),
+                        isPrivate: true
+                    });
+                    await kycReq.save();
+                }
+
+                credentialData = {
+                    message: 'KYC approved but credential issuance failed. Please retry manually.',
+                    error: process.env.NODE_ENV === 'development' ? credentialError.message : undefined
+                };
+            }
+        }
+
         res.status(200).json({
             success: true,
             message: `KYC request ${approved ? 'approved' : 'rejected'} successfully`,
-            data: result.data
+            data: {
+                ...result.data,
+                ...(credentialData && { credential: credentialData })
+            }
         });
 
     } catch (error) {

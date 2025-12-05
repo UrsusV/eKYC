@@ -68,6 +68,7 @@ export const ReviewKycPage: React.FC = () => {
     } catch (err: any) {
       console.error("Failed to submit review:", err);
       console.error("Error response:", err.response?.data);
+      console.error("Full error response:", JSON.stringify(err.response?.data, null, 2));
       const errorMsg = err.response?.data?.message || "Failed to submit review";
       const validationErrors = err.response?.data?.errors;
       if (validationErrors && Array.isArray(validationErrors)) {

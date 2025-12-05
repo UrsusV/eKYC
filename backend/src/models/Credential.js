@@ -5,10 +5,9 @@ const mongoose = require('mongoose');
  * Stores blockchain-issued credentials for KYC verification
  */
 const credentialSchema = new mongoose.Schema({
-    // Unique Credential Identifier
+    // Unique Credential Identifier (auto-generated in pre-save hook)
     credentialId: {
         type: String,
-        required: [true, 'Credential ID is required'],
         unique: true,
         uppercase: true,
         index: true

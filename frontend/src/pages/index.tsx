@@ -12,4 +12,3 @@ export { default as ProfilePage } from "./ProfilePage";
 export { default as OfficerDashboardPage } from "./OfficerDashboardPage";
 export { default as KycQueuePage } from "./KycQueuePage";
 export { default as ReviewKycPage } from "./ReviewKycPage";
-export { default as IssueCredentialPage } from "./IssueCredentialPage";

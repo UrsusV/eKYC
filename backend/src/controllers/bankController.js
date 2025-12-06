@@ -133,6 +133,7 @@ exports.getKycRequestDetails = async (req, res) => {
         const kycRequest = await KycRequest.findById(requestId)
             .populate('userId', 'email personalInfo contactInfo walletAddress kycStatus')
             .populate('bankId', 'bankName bankCode')
+            .populate('sharedCredentialId')
             .populate('workflow.assignedTo', 'personalInfo.fullName email')
             .populate('workflow.reviewedBy', 'personalInfo.fullName email')
             .populate('workflow.approvedBy', 'personalInfo.fullName email');
@@ -153,9 +154,98 @@ exports.getKycRequestDetails = async (req, res) => {
             });
         }
 
+        // If this request uses a shared credential, automatically verify it from blockchain
+        let credentialVerificationResult = null;
+        if (kycRequest.useExistingCredential && kycRequest.sharedCredentialId) {
+            try {
+                // Get credential service instance
+                const credentialService = getCredentialService();
+
+                // Initialize if not already initialized
+                if (!credentialService.isInitialized) {
+                    console.log('🔧 Initializing credential service for blockchain verification...');
+                    await credentialService.initialize();
+                }
+
+                const credential = kycRequest.sharedCredentialId;
+
+                console.log('🔍 Verifying credential on blockchain:', {
+                    credentialId: credential._id,
+                    credentialIdString: credential.credentialId,
+                    blockchainCredentialId: credential.blockchain?.blockchainCredentialId,
+                    hasBlockchainData: !!credential.blockchain
+                });
+
+                // Check if credential has blockchain data
+                if (!credential.blockchain || !credential.blockchain.blockchainCredentialId) {
+                    console.error('❌ Credential has no blockchain data:', credential._id);
+                    credentialVerificationResult = {
+                        isValid: false,
+                        isRevoked: false,
+                        error: 'Credential not found on blockchain',
+                        details: 'This credential was not issued to the blockchain. It may be a legacy credential or there was an error during issuance.',
+                        checkedAt: new Date()
+                    };
+                } else {
+                    // Fetch blockchain status
+                    console.log('📡 Calling blockchain to get credential:', credential.blockchain.blockchainCredentialId);
+                    const blockchainData = await credentialService.getCredential(
+                        credential.blockchain.blockchainCredentialId
+                    );
+
+                    console.log('✅ Blockchain response:', blockchainData);
+
+                    // Update credential verification status in KYC request
+                    kycRequest.credentialVerification = {
+                        verified: !blockchainData.isRevoked,
+                        verifiedAt: new Date(),
+                        verifiedBy: bankOfficer._id,
+                        blockchainStatus: {
+                            isRevoked: blockchainData.isRevoked,
+                            checkedAt: new Date(),
+                            blockchainData: blockchainData
+                        },
+                        verificationNotes: blockchainData.isRevoked
+                            ? 'Credential has been revoked on blockchain'
+                            : 'Credential verified successfully on blockchain'
+                    };
+
+                    await kycRequest.save();
+
+                    credentialVerificationResult = {
+                        isValid: !blockchainData.isRevoked,
+                        isRevoked: blockchainData.isRevoked,
+                        checkedAt: new Date(),
+                        blockchainData: {
+                            credentialHash: blockchainData.credentialHash,
+                            issuer: blockchainData.issuer,
+                            holder: blockchainData.holder,
+                            issuedAt: blockchainData.issuedAt,
+                            credentialType: blockchainData.credentialType
+                        }
+                    };
+                }
+            } catch (blockchainError) {
+                console.error('❌ Blockchain verification error:', blockchainError);
+                console.error('Error stack:', blockchainError.stack);
+                credentialVerificationResult = {
+                    isValid: false,
+                    error: 'Failed to verify credential on blockchain',
+                    details: blockchainError.message,
+                    checkedAt: new Date()
+                };
+            }
+        }
+
+        // Prepare response data
+        const responseData = kycRequest.toObject();
+        if (credentialVerificationResult) {
+            responseData.credentialVerificationResult = credentialVerificationResult;
+        }
+
         res.status(200).json({
             success: true,
-            data: kycRequest
+            data: responseData
         });
 
     } catch (error) {

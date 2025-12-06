@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -7,18 +7,26 @@ import {
   User,
   MapPin,
   Upload,
+  Shield,
+  CheckCircle,
 } from "lucide-react";
 import { kycService } from "@/services/kycService";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { KycFormData, SubmitKycRequest } from "@/types";
+import { KycFormData, SubmitKycRequest, Credential } from "@/types";
 
-type Step = 1 | 2 | 3 | 4;
+type Step = 0 | 1 | 2 | 3 | 4;
 
 export const SubmitKycPage: React.FC = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [currentStep, setCurrentStep] = useState<Step>(0);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Credential sharing state
+  const [useExistingCredential, setUseExistingCredential] = useState(false);
+  const [selectedCredential, setSelectedCredential] = useState<Credential | null>(null);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [loadingCredentials, setLoadingCredentials] = useState(false);
 
   const [formData, setFormData] = useState<Partial<KycFormData>>({
     documentType: "national_id",
@@ -37,6 +45,22 @@ export const SubmitKycPage: React.FC = () => {
     documentBackImage: "",
     selfieImage: "",
   });
+
+  // Load user's credentials on component mount
+  useEffect(() => {
+    const loadCredentials = async () => {
+      try {
+        setLoadingCredentials(true);
+        const result = await kycService.getCredentials({ status: 'active' });
+        setCredentials(result.data || []);
+      } catch (error) {
+        console.error('Failed to load credentials:', error);
+      } finally {
+        setLoadingCredentials(false);
+      }
+    };
+    loadCredentials();
+  }, []);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData((prev) => ({
@@ -121,61 +145,71 @@ export const SubmitKycPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateStep(currentStep)) {
-      return;
-    }
-
-    // Check if all images are uploaded
-    if (
-      !formData.documentFrontImage ||
-      !formData.documentBackImage ||
-      !formData.selfieImage
-    ) {
-      setErrors({
-        submit:
-          "Please upload all required images (document front, back, and selfie)",
-      });
-      return;
-    }
-
     try {
       setLoading(true);
 
-      // Transform form data to match backend API format
-      const addressString = formData.address
-        ? `${formData.address.street}, ${formData.address.city}, ${formData.address.state} ${formData.address.zipCode}, ${formData.address.country}`
-        : '';
+      let submissionData: SubmitKycRequest;
 
-      // Validate address length (backend requires min 10 characters)
-      if (addressString.length < 10) {
-        setErrors({
-          submit: "Address must be at least 10 characters long. Please provide a complete address.",
-        });
-        setLoading(false);
-        return;
+      if (useExistingCredential && selectedCredential) {
+        // Credential sharing submission
+        submissionData = {
+          useExistingCredential: true,
+          sharedCredentialId: selectedCredential._id,
+        };
+      } else {
+        // Traditional KYC submission
+        if (!validateStep(currentStep)) {
+          setLoading(false);
+          return;
+        }
+
+        // Check if all images are uploaded
+        if (
+          !formData.documentFrontImage ||
+          !formData.documentBackImage ||
+          !formData.selfieImage
+        ) {
+          setErrors({
+            submit:
+              "Please upload all required images (document front, back, and selfie)",
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Transform form data to match backend API format
+        const addressString = formData.address
+          ? `${formData.address.street}, ${formData.address.city}, ${formData.address.state} ${formData.address.zipCode}, ${formData.address.country}`
+          : '';
+
+        // Validate address length (backend requires min 10 characters)
+        if (addressString.length < 10) {
+          setErrors({
+            submit: "Address must be at least 10 characters long. Please provide a complete address.",
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Validate NID number format (must be 10, 13, or 17 digits)
+        const nidNumber = formData.documentNumber?.trim() || '';
+        const nidPattern = /^\d{10}$|^\d{13}$|^\d{17}$/;
+        if (!nidPattern.test(nidNumber)) {
+          setErrors({
+            submit: "NID number must be exactly 10, 13, or 17 digits.",
+          });
+          setLoading(false);
+          return;
+        }
+
+        submissionData = {
+          useExistingCredential: false,
+          nid_number: nidNumber,
+          full_name: formData.fullName?.trim() || '',
+          date_of_birth: formData.dateOfBirth || '',
+          address: addressString.trim(),
+        };
       }
-
-      // Validate NID number format (must be 10, 13, or 17 digits)
-      const nidNumber = formData.documentNumber?.trim() || '';
-      const nidPattern = /^\d{10}$|^\d{13}$|^\d{17}$/;
-      if (!nidPattern.test(nidNumber)) {
-        setErrors({
-          submit: "NID number must be exactly 10, 13, or 17 digits.",
-        });
-        setLoading(false);
-        return;
-      }
-
-      // Build submission data - only include optional fields if they have values
-      const submissionData: SubmitKycRequest = {
-        nid_number: nidNumber,
-        full_name: formData.fullName?.trim() || '',
-        date_of_birth: formData.dateOfBirth || '',
-        address: addressString.trim(),
-      };
-
-      // Only add optional fields if they have values (not empty strings)
-      // This prevents validation errors for optional fields
 
       const result = await kycService.submitKyc(submissionData);
       console.log("KYC submitted successfully:", result);
@@ -191,7 +225,7 @@ export const SubmitKycPage: React.FC = () => {
           'nid_number': 'documentNumber',
           'full_name': 'fullName',
           'date_of_birth': 'dateOfBirth',
-          'address': 'submit', // Address is concatenated, show error in submit area
+          'address': 'submit',
           'father_name': 'submit',
           'mother_name': 'submit',
           'phone': 'submit'
@@ -200,7 +234,6 @@ export const SubmitKycPage: React.FC = () => {
         error.response.data.errors.forEach((err: { field: string; message: string }) => {
           const frontendField = fieldMapping[err.field] || err.field;
           if (frontendField === 'submit') {
-            // For optional fields, show in submit error
             validationErrors.submit = validationErrors.submit
               ? `${validationErrors.submit}; ${err.message}`
               : err.message;
@@ -209,7 +242,6 @@ export const SubmitKycPage: React.FC = () => {
           }
         });
 
-        // If no specific field errors, show general message
         if (Object.keys(validationErrors).length === 0) {
           validationErrors.submit = error.response?.data?.message || "Validation failed";
         }
@@ -249,30 +281,183 @@ export const SubmitKycPage: React.FC = () => {
     }
   };
 
-  const renderStepIndicator = () => (
-    <div className="flex items-center justify-center mb-8">
-      {[1, 2, 3, 4].map((step) => (
-        <React.Fragment key={step}>
-          <div
-            className={`flex items-center justify-center w-10 h-10 rounded-full ${
-              step <= currentStep
-                ? "bg-primary-600 text-white"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-500"
-            }`}
-          >
-            {step}
-          </div>
-          {step < 4 && (
+  const renderStepIndicator = () => {
+    if (currentStep === 0) return null;
+
+    return (
+      <div className="flex items-center justify-center mb-8">
+        {[1, 2, 3, 4].map((step) => (
+          <React.Fragment key={step}>
             <div
-              className={`w-16 h-1 mx-2 ${
-                step < currentStep
-                  ? "bg-primary-600"
-                  : "bg-gray-200 dark:bg-gray-700"
+              className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                step <= currentStep
+                  ? "bg-primary-600 text-white"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-500"
               }`}
-            />
+            >
+              {step}
+            </div>
+            {step < 4 && (
+              <div
+                className={`w-16 h-1 mx-2 ${
+                  step < currentStep
+                    ? "bg-primary-600"
+                    : "bg-gray-200 dark:bg-gray-700"
+                }`}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
+  const renderStep0 = () => (
+    <div className="space-y-6">
+      <div className="flex items-center space-x-3 text-primary-600 mb-6">
+        <Shield className="w-8 h-8" />
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Choose Verification Method
+        </h2>
+      </div>
+
+      <p className="text-gray-600 dark:text-gray-300 mb-6">
+        Select how you want to verify your identity
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Option 1: Use Existing Credential */}
+        <button
+          type="button"
+          onClick={() => {
+            setUseExistingCredential(true);
+            setErrors({});
+          }}
+          className={`p-6 border-2 rounded-lg transition-all ${
+            useExistingCredential
+              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+              : 'border-gray-300 dark:border-gray-600 hover:border-primary-300'
+          }`}
+        >
+          <div className="flex flex-col items-center text-center">
+            <CheckCircle className={`w-12 h-12 mb-3 ${useExistingCredential ? 'text-primary-600' : 'text-gray-400'}`} />
+            <h4 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">Use Existing Credential</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Reuse your verified credential from another bank
+            </p>
+          </div>
+        </button>
+
+        {/* Option 2: Upload New Documents */}
+        <button
+          type="button"
+          onClick={() => {
+            setUseExistingCredential(false);
+            setSelectedCredential(null);
+            setErrors({});
+          }}
+          className={`p-6 border-2 rounded-lg transition-all ${
+            !useExistingCredential
+              ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+              : 'border-gray-300 dark:border-gray-600 hover:border-primary-300'
+          }`}
+        >
+          <div className="flex flex-col items-center text-center">
+            <Upload className={`w-12 h-12 mb-3 ${!useExistingCredential ? 'text-primary-600' : 'text-gray-400'}`} />
+            <h4 className="font-semibold text-lg mb-2 text-gray-900 dark:text-white">Upload New Documents</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Submit new KYC documents for verification
+            </p>
+          </div>
+        </button>
+      </div>
+
+      {/* Show credential selection if using existing */}
+      {useExistingCredential && (
+        <div className="mt-6 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Select Your Credential
+          </label>
+
+          {loadingCredentials ? (
+            <div className="flex justify-center py-4">
+              <LoadingSpinner />
+            </div>
+          ) : credentials.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500 dark:text-gray-400">No active credentials found.</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+                You need to complete a traditional KYC process first.
+              </p>
+            </div>
+          ) : (
+            <>
+              <select
+                value={selectedCredential?._id || ''}
+                onChange={(e) => {
+                  const cred = credentials.find(c => c._id === e.target.value);
+                  setSelectedCredential(cred || null);
+                  setErrors({});
+                }}
+                className="input w-full mb-4"
+              >
+                <option value="">-- Select a credential --</option>
+                {credentials.map(cred => (
+                  <option key={cred._id} value={cred._id}>
+                    {cred.bank?.name || 'Unknown Bank'} - Issued on {new Date(cred.issuedAt).toLocaleDateString()}
+                    {cred.isExpired ? ' (Expired)' : ''}
+                  </option>
+                ))}
+              </select>
+
+              {selectedCredential && (
+                <div className="mt-4 p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                  <h5 className="font-semibold mb-3 text-gray-900 dark:text-white">Credential Details:</h5>
+                  <div className="space-y-2 text-sm">
+                    <p><strong className="text-gray-700 dark:text-gray-300">ID:</strong> <span className="text-gray-600 dark:text-gray-400">{selectedCredential.credentialId}</span></p>
+                    <p><strong className="text-gray-700 dark:text-gray-300">Issuing Bank:</strong> <span className="text-gray-600 dark:text-gray-400">{selectedCredential.bank?.name || 'N/A'}</span></p>
+                    <p><strong className="text-gray-700 dark:text-gray-300">Issued:</strong> <span className="text-gray-600 dark:text-gray-400">{new Date(selectedCredential.issuedAt).toLocaleDateString()}</span></p>
+                    <p><strong className="text-gray-700 dark:text-gray-300">Expires:</strong> <span className="text-gray-600 dark:text-gray-400">{new Date(selectedCredential.expiresAt).toLocaleDateString()}</span></p>
+                    <p>
+                      <strong className="text-gray-700 dark:text-gray-300">Status:</strong>{' '}
+                      <span className={selectedCredential.isValid ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                        {selectedCredential.isValid ? '✓ Valid' : '✗ Invalid'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
-        </React.Fragment>
-      ))}
+        </div>
+      )}
+
+      {errors.submit && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 p-4 rounded-lg">
+          {errors.submit}
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => {
+            if (useExistingCredential && !selectedCredential) {
+              setErrors({ submit: 'Please select a credential' });
+              return;
+            }
+            if (useExistingCredential && credentials.length === 0) {
+              setErrors({ submit: 'No credentials available. Please use the traditional KYC process.' });
+              return;
+            }
+            setCurrentStep(useExistingCredential ? 4 : 1);
+          }}
+          className="btn-primary px-8 py-3 flex items-center space-x-2"
+        >
+          <span>Continue</span>
+          <ArrowRight className="w-5 h-5" />
+        </button>
+      </div>
     </div>
   );
 
@@ -469,14 +654,69 @@ export const SubmitKycPage: React.FC = () => {
     </div>
   );
 
-  const renderStep4 = () => (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-3 text-primary-600 mb-6">
-        <Upload className="w-8 h-8" />
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Upload Documents
-        </h2>
-      </div>
+  const renderStep4 = () => {
+    // If using existing credential, show confirmation instead of upload
+    if (useExistingCredential && selectedCredential) {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3 text-primary-600 mb-6">
+            <CheckCircle className="w-8 h-8" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Review & Confirm
+            </h2>
+          </div>
+
+          <div className="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-4">
+              Using Existing Credential
+            </h3>
+
+            <div className="space-y-3 text-sm">
+              <p className="text-green-800 dark:text-green-200">
+                <strong>Credential ID:</strong> {selectedCredential.credentialId}
+              </p>
+              <p className="text-green-800 dark:text-green-200">
+                <strong>Issued by:</strong> {selectedCredential.bank?.name || 'Unknown Bank'}
+              </p>
+              <p className="text-green-800 dark:text-green-200">
+                <strong>Issued on:</strong> {new Date(selectedCredential.issuedAt).toLocaleDateString()}
+              </p>
+              <p className="text-green-800 dark:text-green-200">
+                <strong>Status:</strong>{' '}
+                <span className={selectedCredential.isValid ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                  {selectedCredential.isValid ? '✓ Valid' : '✗ Invalid'}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+              Consent Notice
+            </h4>
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              By submitting this request, you consent to share your verified credential with the selected bank for KYC verification purposes. The bank will be able to verify your identity using your existing credential and check its revocation status on the blockchain.
+            </p>
+          </div>
+
+          {errors.submit && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <p className="text-red-800 dark:text-red-400">{errors.submit}</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Traditional upload flow
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3 text-primary-600 mb-6">
+          <Upload className="w-8 h-8" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Upload Documents
+          </h2>
+        </div>
 
       <div className="space-y-4">
         <div>
@@ -589,7 +829,8 @@ export const SubmitKycPage: React.FC = () => {
         </p>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -601,46 +842,57 @@ export const SubmitKycPage: React.FC = () => {
         {renderStepIndicator()}
 
         <form onSubmit={handleSubmit}>
+          {currentStep === 0 && renderStep0()}
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
           {currentStep === 4 && renderStep4()}
 
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            {currentStep > 1 ? (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="btn btn-secondary flex items-center space-x-2"
-                disabled={loading}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </button>
-            ) : (
-              <div />
-            )}
+          {currentStep > 0 && (
+            <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              {currentStep > 1 ? (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="btn btn-secondary flex items-center space-x-2"
+                  disabled={loading}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(0)}
+                  className="btn btn-secondary flex items-center space-x-2"
+                  disabled={loading}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+              )}
 
-            {currentStep < 4 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="btn btn-primary flex items-center space-x-2"
-              >
-                <span>Next</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn btn-primary flex items-center space-x-2"
-              >
-                {loading && <LoadingSpinner size="sm" />}
-                <span>{loading ? "Submitting..." : "Submit KYC Request"}</span>
-              </button>
-            )}
-          </div>
+              {currentStep < 4 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="btn btn-primary flex items-center space-x-2"
+                >
+                  <span>Next</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn btn-primary flex items-center space-x-2"
+                >
+                  {loading && <LoadingSpinner size="sm" />}
+                  <span>{loading ? "Submitting..." : "Submit KYC Request"}</span>
+                </button>
+              )}
+            </div>
+          )}
         </form>
       </div>
     </div>

@@ -110,7 +110,16 @@ const validateStatusTransition = (currentStatus, newStatus) => {
  */
 const createKYCRequest = async (data) => {
     try {
-        const { userId, bankId, nidNumber, nidData, requestType = 'new', kycLevel = 1 } = data;
+        const {
+            userId,
+            bankId,
+            nidNumber,
+            nidData,
+            requestType = 'new',
+            kycLevel = 1,
+            useExistingCredential = false,
+            sharedCredentialId = null
+        } = data;
 
         // Validate required fields
         if (!userId) {
@@ -121,14 +130,17 @@ const createKYCRequest = async (data) => {
             throw new Error('Bank ID is required');
         }
 
-        if (!nidNumber) {
+        if (!nidNumber && !useExistingCredential) {
             throw new Error('NID number is required');
         }
 
-        // Validate NID format
-        const nidValidation = verifyNIDFormat(nidNumber);
-        if (!nidValidation.valid) {
-            throw new Error(nidValidation.message);
+        // Validate NID format only if not using existing credential
+        let nidValidation = { valid: true, format: 'shared-credential' };
+        if (!useExistingCredential) {
+            nidValidation = verifyNIDFormat(nidNumber);
+            if (!nidValidation.valid) {
+                throw new Error(nidValidation.message);
+            }
         }
 
         // Check if user exists
@@ -157,22 +169,24 @@ const createKYCRequest = async (data) => {
             throw new Error('User already has a pending KYC request');
         }
 
-        // Validate NID data structure
-        const requiredNidFields = ['nid_number', 'full_name', 'date_of_birth', 'address'];
-        const missingFields = requiredNidFields.filter(field => !nidData || !nidData[field]);
+        // Validate NID data structure only if not using existing credential
+        if (!useExistingCredential) {
+            const requiredNidFields = ['nid_number', 'full_name', 'date_of_birth', 'address'];
+            const missingFields = requiredNidFields.filter(field => !nidData || !nidData[field]);
 
-        if (missingFields.length > 0) {
-            throw new Error(`Missing required NID fields: ${missingFields.join(', ')}`);
+            if (missingFields.length > 0) {
+                throw new Error(`Missing required NID fields: ${missingFields.join(', ')}`);
+            }
         }
 
-        // Update user's NID if not already set
-        if (!user.personalInfo.nid) {
+        // Update user's NID if not already set and not using existing credential
+        if (!useExistingCredential && !user.personalInfo.nid) {
             user.personalInfo.nid = nidNumber;
             await user.save();
         }
 
-        // Create KYC request
-        const kycRequest = await KycRequest.create({
+        // Create KYC request with credential sharing support
+        const kycRequestData = {
             userId,
             bankId,
             requestType,
@@ -180,9 +194,10 @@ const createKYCRequest = async (data) => {
             status: 'submitted',
             createdBy: userId,
             updatedBy: userId,
+            useExistingCredential,
             verificationChecks: {
                 nidVerification: {
-                    status: 'pending'
+                    status: useExistingCredential ? 'success' : 'pending'
                 },
                 emailVerification: {
                     status: user.isEmailVerified ? 'success' : 'pending'
@@ -196,7 +211,22 @@ const createKYCRequest = async (data) => {
                 nidData: nidData,
                 nidFormat: nidValidation.format
             }
-        });
+        };
+
+        // Add shared credential if using existing credential
+        if (useExistingCredential && sharedCredentialId) {
+            kycRequestData.sharedCredentialId = sharedCredentialId;
+            kycRequestData.credentialVerification = {
+                verified: false,
+                blockchainStatus: {
+                    isRevoked: null,
+                    checkedAt: null,
+                    blockchainData: null
+                }
+            };
+        }
+
+        const kycRequest = await KycRequest.create(kycRequestData);
 
         // Update user KYC status
         user.kycStatus = 'pending';

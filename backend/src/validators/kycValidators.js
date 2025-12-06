@@ -4,9 +4,39 @@ const Joi = require('joi');
  * KYC submission validation schema
  */
 const submitKycSchema = Joi.object({
+    // Credential sharing option
+    useExistingCredential: Joi.boolean()
+        .default(false)
+        .messages({
+            'boolean.base': 'useExistingCredential must be a boolean'
+        }),
+
+    sharedCredentialId: Joi.string()
+        .when('useExistingCredential', {
+            is: true,
+            then: Joi.required(),
+            otherwise: Joi.optional()
+        })
+        .messages({
+            'string.empty': 'Credential ID is required when using existing credential',
+            'any.required': 'Credential ID is required when using existing credential'
+        }),
+
+    // Bank selection
+    bankId: Joi.string()
+        .optional()
+        .messages({
+            'string.empty': 'Bank ID cannot be empty'
+        }),
+
+    // Traditional KYC fields (required only when NOT using existing credential)
     nid_number: Joi.string()
         .pattern(/^\d{10}$|^\d{13}$|^\d{17}$/)
-        .required()
+        .when('useExistingCredential', {
+            is: false,
+            then: Joi.required(),
+            otherwise: Joi.optional()
+        })
         .messages({
             'string.empty': 'NID number is required',
             'string.pattern.base': 'NID number must be 10, 13, or 17 digits',
@@ -17,7 +47,11 @@ const submitKycSchema = Joi.object({
         .min(2)
         .max(100)
         .trim()
-        .required()
+        .when('useExistingCredential', {
+            is: false,
+            then: Joi.required(),
+            otherwise: Joi.optional()
+        })
         .messages({
             'string.empty': 'Full name is required',
             'string.min': 'Full name must be at least 2 characters long',
@@ -28,7 +62,11 @@ const submitKycSchema = Joi.object({
     date_of_birth: Joi.date()
         .iso()
         .max('now')
-        .required()
+        .when('useExistingCredential', {
+            is: false,
+            then: Joi.required(),
+            otherwise: Joi.optional()
+        })
         .messages({
             'date.base': 'Date of birth must be a valid date',
             'date.max': 'Date of birth cannot be in the future',
@@ -39,7 +77,11 @@ const submitKycSchema = Joi.object({
         .min(10)
         .max(500)
         .trim()
-        .required()
+        .when('useExistingCredential', {
+            is: false,
+            then: Joi.required(),
+            otherwise: Joi.optional()
+        })
         .messages({
             'string.empty': 'Address is required',
             'string.min': 'Address must be at least 10 characters long',

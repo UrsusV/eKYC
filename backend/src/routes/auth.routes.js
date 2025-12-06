@@ -25,30 +25,28 @@ const conditionalMiddleware = (middleware) => {
 
 /**
  * Rate limiter for authentication routes
- * 30 requests per minute per IP (increased for development)
+ * Higher limits for development, stricter for production
  */
 const authRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 30, // 30 requests per minute (increased from 10)
+    max: process.env.NODE_ENV === 'production' ? 30 : 100, // 100 in dev, 30 in prod
     message: {
         success: false,
         message: 'Too many requests from this IP, please try again after a minute.'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    // Skip rate limiting for successful requests (optional)
     skipSuccessfulRequests: false,
-    // Skip rate limiting for failed requests (optional)
     skipFailedRequests: false
 }));
 
 /**
  * Stricter rate limiter for login attempts
- * 20 requests per 5 minutes per IP (increased for development)
+ * More lenient in development for testing
  */
 const loginRateLimiter = conditionalMiddleware(rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 20, // 20 requests per 5 minutes (increased from 5)
+    max: process.env.NODE_ENV === 'production' ? 20 : 50, // 50 in dev, 20 in prod
     message: {
         success: false,
         message: 'Too many login attempts from this IP, please try again after 5 minutes.'

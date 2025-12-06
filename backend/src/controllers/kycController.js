@@ -29,49 +29,185 @@ exports.submitKycRequest = async (req, res) => {
             });
         }
 
-        const { nid_number, full_name, date_of_birth, address, father_name, mother_name, phone } = value;
-        const userId = req.user.id;
-
-        // Get the first active bank (in production, user should select bank)
-        const bank = await Bank.findOne({ isActive: true });
-        if (!bank) {
-            return res.status(400).json({
-                success: false,
-                message: 'No active bank found. Please contact support.'
-            });
-        }
-
-        // Prepare NID data
-        const nidData = {
+        const {
+            useExistingCredential,
+            sharedCredentialId,
+            bankId,
             nid_number,
             full_name,
             date_of_birth,
             address,
-            father_name: father_name || req.user.personalInfo?.fatherName || 'N/A',
-            mother_name: mother_name || req.user.personalInfo?.motherName || 'N/A'
-        };
+            father_name,
+            mother_name,
+            phone
+        } = value;
+        const userId = req.user.id;
 
-        // Create KYC request using service
-        const result = await kycService.createKYCRequest({
-            userId,
-            bankId: bank._id,
-            nidNumber: nid_number,
-            nidData,
-            requestType: 'new',
-            kycLevel: 1
-        });
-
-        res.status(201).json({
-            success: true,
-            message: 'KYC request submitted successfully',
-            data: {
-                requestId: result.data.requestId,
-                _id: result.data._id,
-                status: result.data.status,
-                kycLevel: result.data.kycLevel,
-                createdAt: result.data.createdAt
+        // Determine which bank to use
+        let bank;
+        if (bankId) {
+            bank = await Bank.findById(bankId);
+            if (!bank || !bank.isActive) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Selected bank is not available'
+                });
             }
-        });
+        } else {
+            // Get the first active bank (in production, user should select bank)
+            bank = await Bank.findOne({ isActive: true });
+            if (!bank) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No active bank found. Please contact support.'
+                });
+            }
+        }
+
+        let result;
+
+        // Handle credential sharing flow
+        if (useExistingCredential && sharedCredentialId) {
+            // Verify the credential exists and belongs to the user
+            const credential = await Credential.findById(sharedCredentialId);
+
+            if (!credential) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Credential not found'
+                });
+            }
+
+            if (credential.userId.toString() !== userId.toString()) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'You can only share your own credentials'
+                });
+            }
+
+            if (credential.status !== 'active' || credential.revocation.isRevoked) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot share a revoked or inactive credential'
+                });
+            }
+
+            if (credential.isExpired) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot share an expired credential'
+                });
+            }
+
+            // Check if user already has a pending request with this bank using this credential
+            const existingRequest = await KycRequest.findOne({
+                userId,
+                bankId: bank._id,
+                sharedCredentialId,
+                status: { $in: ['pending', 'submitted', 'under_review', 'document_verification'] }
+            });
+
+            if (existingRequest) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'You already have a pending KYC request with this bank using this credential'
+                });
+            }
+
+            // Create KYC request with shared credential
+            result = await kycService.createKYCRequest({
+                userId,
+                bankId: bank._id,
+                nidNumber: credential.credentialData.documentNumber || 'N/A',
+                nidData: {
+                    nid_number: credential.credentialData.documentNumber || 'N/A',
+                    full_name: credential.credentialData.fullName || req.user.personalInfo?.fullName || 'N/A',
+                    date_of_birth: credential.credentialData.dateOfBirth || new Date(),
+                    address: req.user.personalInfo?.address || 'N/A',
+                    father_name: req.user.personalInfo?.fatherName || 'N/A',
+                    mother_name: req.user.personalInfo?.motherName || 'N/A'
+                },
+                requestType: 'new',
+                kycLevel: credential.credentialData.kycLevel || 1,
+                useExistingCredential: true,
+                sharedCredentialId: credential._id
+            });
+
+            // Create consent for credential sharing automatically
+            const Consent = require('../models/Consent');
+            const consent = new Consent({
+                userId,
+                kycRequestId: result.data._id,
+                consentType: 'data_sharing',
+                purpose: `Sharing verified credential from ${credential.bankId} with ${bank.bankName} for KYC verification`,
+                consentText: `I consent to share my verified credential (Credential ID: ${credential.credentialId}) issued by my previous institution with ${bank.bankName} for the purpose of KYC verification. This allows ${bank.bankName} to verify my identity using my existing verified credential.`,
+                duration: 365,
+                dataCategories: ['personal_info', 'identification'],
+                isMandatory: true,
+                canBeWithdrawn: false,
+                status: 'granted',
+                grantedAt: new Date()
+            });
+
+            // Set expiry
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 365);
+            consent.expiresAt = expiryDate;
+
+            await consent.save();
+
+            res.status(201).json({
+                success: true,
+                message: 'KYC request submitted successfully using existing credential',
+                data: {
+                    requestId: result.data.requestId,
+                    _id: result.data._id,
+                    status: result.data.status,
+                    kycLevel: result.data.kycLevel,
+                    useExistingCredential: true,
+                    sharedCredentialId: credential._id,
+                    credentialId: credential.credentialId,
+                    consentGranted: true,
+                    createdAt: result.data.createdAt
+                }
+            });
+
+        } else {
+            // Traditional KYC submission flow
+            // Prepare NID data
+            const nidData = {
+                nid_number,
+                full_name,
+                date_of_birth,
+                address,
+                father_name: father_name || req.user.personalInfo?.fatherName || 'N/A',
+                mother_name: mother_name || req.user.personalInfo?.motherName || 'N/A'
+            };
+
+            // Create KYC request using service
+            result = await kycService.createKYCRequest({
+                userId,
+                bankId: bank._id,
+                nidNumber: nid_number,
+                nidData,
+                requestType: 'new',
+                kycLevel: 1,
+                useExistingCredential: false
+            });
+
+            res.status(201).json({
+                success: true,
+                message: 'KYC request submitted successfully',
+                data: {
+                    requestId: result.data.requestId,
+                    _id: result.data._id,
+                    status: result.data.status,
+                    kycLevel: result.data.kycLevel,
+                    useExistingCredential: false,
+                    createdAt: result.data.createdAt
+                }
+            });
+        }
 
     } catch (error) {
         console.error('Submit KYC request error:', error);

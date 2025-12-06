@@ -18,7 +18,7 @@ const authRoutes = require('./routes/auth.routes');
 const kycRoutes = require('./routes/kyc.routes');
 const bankRoutes = require('./routes/bank.routes');
 const consentRoutes = require('./routes/consent.routes');
-// const credentialRoutes = require('./routes/credential.routes');
+const credentialRoutes = require('./routes/credential.routes');
 // const adminRoutes = require('./routes/admin.routes');
 
 // Initialize express app
@@ -108,7 +108,7 @@ app.use(`/api/${apiVersion}/auth`, authRoutes);
 app.use(`/api/${apiVersion}/kyc`, kycRoutes);
 app.use(`/api/${apiVersion}/bank`, bankRoutes);
 app.use(`/api/${apiVersion}/consent`, consentRoutes);
-// app.use(`/api/${apiVersion}/credentials`, credentialRoutes);
+app.use(`/api/${apiVersion}/credentials`, credentialRoutes);
 // app.use(`/api/${apiVersion}/admin`, adminRoutes);
 
 // API root endpoint
@@ -121,7 +121,8 @@ app.get(`/api/${apiVersion}`, (req, res) => {
             auth: `/api/${apiVersion}/auth`,
             kyc: `/api/${apiVersion}/kyc`,
             bank: `/api/${apiVersion}/bank`,
-            consent: `/api/${apiVersion}/consent`
+            consent: `/api/${apiVersion}/consent`,
+            credentials: `/api/${apiVersion}/credentials`
         }
     });
 });

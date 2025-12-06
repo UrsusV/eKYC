@@ -162,6 +162,23 @@ export interface KycRequest {
     addedAt: string;
     isPrivate: boolean;
   }>;
+  // Credential sharing fields
+  useExistingCredential?: boolean;
+  sharedCredentialId?: Credential;
+  credentialVerificationResult?: {
+    isValid: boolean;
+    isRevoked: boolean;
+    checkedAt: string;
+    blockchainData?: {
+      credentialHash: string;
+      issuer: string;
+      holder: string;
+      issuedAt: number;
+      credentialType: number;
+    };
+    error?: string;
+    details?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -187,10 +204,16 @@ export interface KycFormData {
 
 // Backend API format (snake_case)
 export interface SubmitKycRequest {
-  nid_number: string;
-  full_name: string;
-  date_of_birth: string;
-  address: string; // Concatenated string format
+  // Credential sharing options
+  useExistingCredential?: boolean;
+  sharedCredentialId?: string;
+  bankId?: string;
+
+  // Traditional KYC fields (required only when NOT using existing credential)
+  nid_number?: string;
+  full_name?: string;
+  date_of_birth?: string;
+  address?: string; // Concatenated string format
   father_name?: string;
   mother_name?: string;
   phone?: string;
@@ -228,6 +251,12 @@ export interface Credential {
     revocationReason?: string;
     revocationDetails?: string;
   };
+  bank?: {
+    name: string;
+    code: string;
+  };
+  isValid?: boolean;
+  isExpired?: boolean;
   createdAt: string;
   updatedAt: string;
 }

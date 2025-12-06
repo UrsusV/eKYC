@@ -43,6 +43,36 @@ const kycRequestSchema = new mongoose.Schema({
         default: 1
     },
 
+    // Credential Sharing (for reusing existing verified credentials)
+    useExistingCredential: {
+        type: Boolean,
+        default: false
+    },
+
+    sharedCredentialId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Credential',
+        index: true
+    },
+
+    credentialVerification: {
+        verified: {
+            type: Boolean,
+            default: false
+        },
+        verifiedAt: Date,
+        verifiedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        blockchainStatus: {
+            isRevoked: Boolean,
+            checkedAt: Date,
+            blockchainData: mongoose.Schema.Types.Mixed
+        },
+        verificationNotes: String
+    },
+
     // Status Workflow
     status: {
         type: String,

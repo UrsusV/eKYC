@@ -223,10 +223,10 @@ export interface SubmitKycRequest {
 export interface Credential {
   _id: string;
   credentialId: string;
-  userId: string;
+  userId: string | User;
   kycRequestId: string;
   bankId: string;
-  issuedBy: string;
+  issuedBy: string | User;
   credentialType:
     | "identity_verification"
     | "address_verification"

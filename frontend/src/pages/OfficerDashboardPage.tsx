@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Users, CheckCircle, Clock, XCircle } from "lucide-react";
+import { FileText, Users, CheckCircle, Clock, XCircle, Shield } from "lucide-react";
 import { bankService } from "@/services/bankService";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -169,12 +169,19 @@ export const OfficerDashboardPage: React.FC = () => {
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link
             to="/officer/kyc-requests"
             className="btn btn-primary text-center"
           >
             View KYC Queue
+          </Link>
+          <Link
+            to="/officer/credentials"
+            className="btn btn-primary text-center flex items-center justify-center gap-2"
+          >
+            <Shield className="w-5 h-5" />
+            Manage Credentials
           </Link>
           <Link to="/profile" className="btn btn-secondary text-center">
             My Profile
@@ -196,6 +203,7 @@ export const OfficerDashboardPage: React.FC = () => {
                 Approve or reject verification requests with detailed comments
               </li>
               <li>Issue blockchain credentials for approved KYC requests</li>
+              <li>Manage and revoke issued credentials when necessary</li>
               <li>Maintain accurate records of all verification activities</li>
             </ul>
           </div>

@@ -248,6 +248,7 @@ class CredentialService {
           credentialId,
           blockNumber: result.receipt.blockNumber,
           gasUsed: result.receipt.gasUsed.toString(),
+          issuerAddress: result.tx.from || this.walletManager.getWallet('default').address,
         };
       }
     } catch (error) {

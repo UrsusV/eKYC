@@ -804,3 +804,80 @@ exports.issueCredential = async (req, res) => {
         });
     }
 };
+
+/**
+ * @desc    Get credentials issued by bank officer's bank
+ * @route   GET /api/v1/bank/credentials
+ * @access  Private (Bank Officer only)
+ */
+exports.getIssuedCredentials = async (req, res) => {
+    try {
+        const bankOfficer = req.user;
+
+        // Verify bank officer has bank association
+        if (!bankOfficer.bankOfficerInfo || !bankOfficer.bankOfficerInfo.bankId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Bank officer is not associated with any bank'
+            });
+        }
+
+        const bankId = bankOfficer.bankOfficerInfo.bankId;
+
+        // Get query parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const status = req.query.status || 'all';
+        const search = req.query.search || '';
+
+        // Build query
+        const query = { bankId };
+
+        // Filter by status
+        if (status !== 'all') {
+            query.status = status;
+        }
+
+        // Search by credential ID, user ID, or NID
+        if (search) {
+            query.$or = [
+                { credentialId: { $regex: search, $options: 'i' } },
+                { userId: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Calculate skip
+        const skip = (page - 1) * limit;
+
+        // Get credentials
+        const credentials = await Credential.find(query)
+            .populate('userId', 'email personalInfo.fullName personalInfo.nid')
+            .populate('issuedBy', 'email personalInfo.fullName')
+            .sort({ issuedAt: -1 })
+            .limit(limit)
+            .skip(skip);
+
+        // Get total count
+        const totalCount = await Credential.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            data: credentials,
+            pagination: {
+                total: totalCount,
+                page,
+                limit,
+                totalPages: Math.ceil(totalCount / limit)
+            }
+        });
+
+    } catch (error) {
+        console.error('Get issued credentials error:', error);
+
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching issued credentials',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};

@@ -88,6 +88,26 @@ class BankService {
       `/bank/credentials?${queryParams}`
     );
   }
+
+  async revokeCredential(
+    credentialId: string,
+    reason: string,
+    details?: string
+  ): Promise<Credential> {
+    const response = await apiClient.post<Credential>(
+      `/credentials/${credentialId}/revoke`,
+      {
+        reason,
+        ...(details && { details }),
+      }
+    );
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.message || "Credential revocation failed");
+  }
 }
 
 export const bankService = new BankService();

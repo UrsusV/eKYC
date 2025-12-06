@@ -3,7 +3,7 @@ const User = require('../models/User');
 const Bank = require('../models/Bank');
 const Consent = require('../models/Consent');
 const KycRequest = require('../models/KycRequest');
-const credentialService = require('../services/blockchain/index');
+const { getCredentialService } = require('../services/blockchain');
 const Joi = require('joi');
 
 /**
@@ -46,8 +46,8 @@ exports.revokeCredential = async (req, res) => {
 
         const { reason, details } = value;
 
-        // Find credential
-        const credential = await Credential.findById(credentialId)
+        // Find credential by credentialId field (not _id)
+        const credential = await Credential.findOne({ credentialId })
             .populate('bankId', 'bankName')
             .populate('issuedBy', 'email role');
 
@@ -76,12 +76,79 @@ exports.revokeCredential = async (req, res) => {
             });
         }
 
+        // Check if bank officer has bank association
+        if (!user.bankOfficerInfo || !user.bankOfficerInfo.bankId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Bank officer is not associated with any bank'
+            });
+        }
+
         // Check if the bank officer is from the issuing bank
-        if (user.bankId.toString() !== credential.bankId._id.toString()) {
+        if (user.bankOfficerInfo.bankId.toString() !== credential.bankId._id.toString()) {
             return res.status(403).json({
                 success: false,
                 message: 'You can only revoke credentials issued by your bank'
             });
+        }
+
+        // Get credential service
+        const credentialService = getCredentialService();
+
+        // Initialize if not already initialized
+        if (!credentialService.isInitialized) {
+            await credentialService.initialize();
+        }
+
+        // If issuer address is missing or zero address, fetch from blockchain
+        if (!credential.blockchain.issuerAddress || credential.blockchain.issuerAddress === '0x0000000000000000000000000000000000000000') {
+            try {
+                console.log('Fetching issuer address from blockchain for credential:', credential.blockchain.blockchainCredentialId);
+                const blockchainCred = await credentialService.getCredential(
+                    credential.blockchain.blockchainCredentialId
+                );
+
+                console.log('Blockchain credential data:', {
+                    issuer: blockchainCred.issuer,
+                    holder: blockchainCred.holder,
+                    isRevoked: blockchainCred.isRevoked
+                });
+
+                // Check if the credential exists on blockchain (issuer would not be zero if it exists)
+                if (blockchainCred.issuer === '0x0000000000000000000000000000000000000000') {
+                    console.warn('Credential not found on blockchain, performing database-only revocation');
+
+                    // Revoke in database only (blockchain revocation is skipped)
+                    await credential.revoke(userId, reason, details, null);
+
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Credential revoked successfully (database only - credential not found on blockchain)',
+                        data: {
+                            credentialId: credential.credentialId,
+                            status: credential.status,
+                            revokedAt: credential.revocation.revokedAt,
+                            revocationReason: credential.revocation.revocationReason,
+                            transactionHash: null,
+                            warning: 'This credential was not found on the blockchain and was revoked in the database only.'
+                        }
+                    });
+                }
+
+                // Update the issuer address in the database using set and markModified
+                credential.set('blockchain.issuerAddress', blockchainCred.issuer);
+                credential.markModified('blockchain');
+                await credential.save();
+
+                console.log('Successfully updated issuer address in database to:', blockchainCred.issuer);
+            } catch (fetchError) {
+                console.error('Failed to fetch issuer from blockchain:', fetchError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to verify credential issuer from blockchain',
+                    error: process.env.NODE_ENV === 'development' ? fetchError.message : undefined
+                });
+            }
         }
 
         // Revoke on blockchain first
@@ -96,7 +163,7 @@ exports.revokeCredential = async (req, res) => {
             console.error('Blockchain revocation failed:', blockchainError);
             return res.status(500).json({
                 success: false,
-                message: 'Failed to revoke credential on blockchain',
+                message: 'Failed to revoke credential on blockchain. The credential was issued by a different wallet address and can only be revoked by that issuer.',
                 error: process.env.NODE_ENV === 'development' ? blockchainError.message : undefined
             });
         }

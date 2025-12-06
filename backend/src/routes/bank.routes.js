@@ -4,7 +4,8 @@ const {
     getKycRequests,
     getKycRequestDetails,
     verifyKycRequest,
-    issueCredential
+    issueCredential,
+    getIssuedCredentials
 } = require('../controllers/bankController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -102,5 +103,12 @@ router.post('/verify/:requestId', verifyKycRequest);
  * @access  Private (Bank Officer only)
  */
 router.post('/issue-credential', credentialIssuanceRateLimiter, issueCredential);
+
+/**
+ * @route   GET /api/v1/bank/credentials
+ * @desc    Get credentials issued by bank officer's bank
+ * @access  Private (Bank Officer only)
+ */
+router.get('/credentials', getIssuedCredentials);
 
 module.exports = router;

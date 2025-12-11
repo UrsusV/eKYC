@@ -213,7 +213,13 @@ export const SubmitKycPage: React.FC = () => {
 
       const result = await kycService.submitKyc(submissionData);
       console.log("KYC submitted successfully:", result);
-      navigate("/kyc/status");
+      // Navigate to the status page with the request ID
+      if (result._id) {
+        navigate(`/kyc/status/${result._id}`);
+      } else {
+        // Fallback to history if _id is not available
+        navigate("/kyc/history");
+      }
     } catch (error: any) {
       console.error("Failed to submit KYC:", error);
 

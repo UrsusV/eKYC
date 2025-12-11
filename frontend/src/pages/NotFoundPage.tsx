@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Home, ArrowLeft } from "lucide-react";
+import { Home, LogIn } from "lucide-react";
 
 const NotFoundPage: React.FC = () => {
   return (
@@ -11,25 +11,22 @@ const NotFoundPage: React.FC = () => {
             404
           </h1>
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mt-4">
-            Page Not Found
+            Session Expired
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-4">
-            The page you're looking for doesn't exist or has been moved.
+            For security purposes, please re-login to continue.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link to="/" className="btn btn-primary inline-flex items-center justify-center">
+          <Link to="/login" className="btn btn-primary inline-flex items-center justify-center">
+            <LogIn className="w-4 h-4 mr-2" />
+            Re-login
+          </Link>
+          <Link to="/" className="btn btn-secondary inline-flex items-center justify-center">
             <Home className="w-4 h-4 mr-2" />
             Go Home
           </Link>
-          <button
-            onClick={() => window.history.back()}
-            className="btn btn-secondary inline-flex items-center justify-center"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
-          </button>
         </div>
       </div>
     </div>

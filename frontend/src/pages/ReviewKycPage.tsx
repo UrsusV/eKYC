@@ -66,7 +66,7 @@ export const ReviewKycPage: React.FC = () => {
       setSubmitting(true);
       setError(null);
       await bankService.verifyKyc(requestId, action, notes, rejectionCategory);
-      navigate("/officer/kyc-queue");
+      navigate("/officer/kyc-requests");
     } catch (err: any) {
       console.error("Failed to submit review:", err);
       console.error("Error response:", err.response?.data);
@@ -496,7 +496,7 @@ export const ReviewKycPage: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-end space-x-4 pt-4">
-              <Link to="/officer/kyc-queue" className="btn btn-secondary">
+              <Link to="/officer/kyc-requests" className="btn btn-secondary">
                 Cancel
               </Link>
               <button

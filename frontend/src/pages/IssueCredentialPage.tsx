@@ -37,7 +37,7 @@ export const IssueCredentialPage: React.FC = () => {
       setRequestId("");
 
       setTimeout(() => {
-        navigate("/officer/kyc-queue");
+        navigate("/officer/kyc-requests");
       }, 2000);
     } catch (err: any) {
       console.error("Failed to issue credential:", err);
@@ -138,7 +138,7 @@ export const IssueCredentialPage: React.FC = () => {
           <div className="flex items-center justify-end space-x-4">
             <button
               type="button"
-              onClick={() => navigate("/officer/kyc-queue")}
+              onClick={() => navigate("/officer/kyc-requests")}
               className="btn btn-secondary"
               disabled={loading}
             >

@@ -1,427 +1,983 @@
 # eKYC Blockchain System
 
-A complete Know Your Customer (KYC) verification system with blockchain-based credential issuance, built with Node.js, Express, MongoDB, Redis, and Ethereum smart contracts.
+> A blockchain-based Know Your Customer (KYC) verification and digital credential issuance platform built with modern web technologies and Ethereum smart contracts.
 
-## Features
+## 📋 Table of Contents
 
-- **Customer-Facing APIs:** Registration, KYC submission, credential retrieval
-- **Bank Officer APIs:** KYC verification, blockchain credential issuance
-- **Blockchain Integration:** Immutable credential storage on Ethereum
-- **Security:** JWT authentication, rate limiting, data sanitization, RBAC
-- **Testing:** Comprehensive integration tests with Jest
-- **Demo Flow:** Complete workflow demonstration script
-- **GUI Tools:** MongoDB Express and Redis Commander for easy management
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Technology Stack](#technology-stack)
+- [System Architecture](#system-architecture)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [API Documentation](#api-documentation)
+- [Smart Contracts](#smart-contracts)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Security Features](#security-features)
+- [License](#license)
 
-## Architecture
+## 🌟 Overview
+
+The eKYC Blockchain System is a comprehensive digital identity verification platform that combines traditional KYC processes with blockchain technology. The system enables:
+
+- **Customers** to submit KYC documents and receive verifiable blockchain-based credentials
+- **Bank Officers** to review and verify KYC submissions and issue immutable credentials on the blockchain
+- **Verifiers** to validate credentials without accessing sensitive personal information
+- **Consent Management** for secure credential sharing between parties
+
+The platform ensures data immutability, transparency, and user privacy through its blockchain-based architecture while maintaining a user-friendly interface for all stakeholders.
+
+## ✨ Key Features
+
+### Customer Features
+
+- User registration and authentication with JWT
+- KYC document submission (NID, passport, driving license, etc.)
+- Real-time KYC status tracking
+- Blockchain credential retrieval and management
+- Consent-based credential sharing
+- KYC submission history
+
+### Bank Officer Features
+
+- KYC request queue management
+- Document review and verification workflow
+- Blockchain credential issuance
+- Request filtering and search
+- Verification history tracking
+- Dashboard with statistics
+
+### System Features
+
+- **Blockchain Integration**: Immutable credential storage on Ethereum
+- **Security**: JWT authentication, rate limiting, input sanitization, RBAC
+- **Consent Management**: Granular control over credential sharing
+- **Caching**: Redis-based caching for improved performance
+- **File Upload**: Secure document handling with validation
+- **Database**: MongoDB for persistent storage
+- **API Documentation**: Swagger/OpenAPI integration
+- **Testing**: Comprehensive unit, integration, and E2E tests
+- **Docker Support**: Containerized development environment
+
+## 🛠 Technology Stack
+
+### Frontend
+
+- **React 18.3** - Modern UI library
+- **TypeScript** - Type-safe development
+- **Vite** - Fast build tool
+- **TailwindCSS** - Utility-first CSS framework
+- **React Router v6** - Client-side routing
+- **TanStack Query** - Data fetching and caching
+- **Axios** - HTTP client
+- **Lucide React** - Icon library
+
+### Backend
+
+- **Node.js 18+** - JavaScript runtime
+- **Express.js 4** - Web framework
+- **MongoDB 7.0** - NoSQL database
+- **Mongoose 8** - ODM for MongoDB
+- **Redis 7** - Caching and session storage
+- **JWT** - Authentication tokens
+- **Bcrypt** - Password hashing
+- **Multer** - File upload handling
+- **Winston** - Logging
+- **Joi** - Request validation
+
+### Blockchain
+
+- **Hardhat** - Ethereum development environment
+- **Solidity ^0.8.0** - Smart contract language
+- **Ethers.js 6** - Ethereum library
+- **OpenZeppelin Contracts** - Secure smart contract library
+- **Chai** - Testing framework
+
+### DevOps & Tools
+
+- **Docker & Docker Compose** - Containerization
+- **Jest** - Testing framework
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
+- **MongoDB Express** - Database GUI
+- **Redis Commander** - Redis GUI
+
+## 🏗 System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Frontend (TBD)                       │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          │ REST API
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Backend (Express.js)                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
-│  │ Auth Routes  │  │  KYC Routes  │  │ Bank Routes  │     │
-│  └──────────────┘  └──────────────┘  └──────────────┘     │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │            Middleware (Auth, Error, etc.)           │   │
-│  └─────────────────────────────────────────────────────┘   │
-└───────────┬────────────────────────────┬────────────────────┘
-            │                            │
-            ▼                            ▼
-┌─────────────────────┐      ┌─────────────────────────┐
-│   MongoDB + Redis   │      │  Blockchain (Hardhat)   │
-│   (Docker)          │      │  Smart Contracts        │
-└─────────────────────┘      └─────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     Frontend (React + TypeScript)               │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
+│  │Dashboard │  │   KYC    │  │  Consent │  │ Credentials  │   │
+│  │  Pages   │  │  Pages   │  │  Pages   │  │    Pages     │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────────┘   │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │        React Router + TanStack Query + Axios            │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         │ REST API (JSON)
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Backend API (Express.js)                      │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │                  API Routes Layer                         │  │
+│  │  /auth  /kyc  /bank  /consent  /credentials              │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              Middleware Layer                             │  │
+│  │  Authentication │ Authorization │ Validation │ Error      │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │             Controllers & Services                        │  │
+│  │  Auth │ KYC │ Bank │ Consent │ Blockchain │ Credential   │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└───────┬─────────────────────┬──────────────────┬───────────────┘
+        │                     │                  │
+        ▼                     ▼                  ▼
+┌───────────────┐   ┌──────────────────┐   ┌──────────────────┐
+│   MongoDB     │   │      Redis       │   │  Ethereum Node   │
+│   (Docker)    │   │   (Docker)       │   │   (Hardhat)      │
+│               │   │                  │   │                  │
+│ • Users       │   │ • Sessions       │   │ • CredentialReg  │
+│ • KYC Reqs    │   │ • Cache          │   │   Smart Contract │
+│ • Credentials │   │ • Rate Limits    │   │ • Immutable      │
+│ • Consents    │   │ • Queues         │   │   Credentials    │
+└───────────────┘   └──────────────────┘   └──────────────────┘
 ```
 
-## Quick Start
+### Data Flow
+
+1. **User Authentication**: JWT-based authentication with refresh tokens
+2. **KYC Submission**: Customer submits documents → Stored in MongoDB → Files uploaded to server
+3. **KYC Verification**: Bank officer reviews → Approves/Rejects → Updates status
+4. **Credential Issuance**: Officer issues credential → Smart contract stores hash → MongoDB stores metadata
+5. **Consent Management**: Credential holder grants consent → Verifier can access credential
+6. **Credential Verification**: Anyone can verify credential authenticity via blockchain
+
+## 📁 Project Structure
+
+```
+eKYC/
+├── backend/                          # Backend Express.js application
+│   ├── src/
+│   │   ├── routes/                   # API route definitions
+│   │   │   ├── auth.routes.js        # Authentication endpoints
+│   │   │   ├── kyc.routes.js         # KYC submission endpoints
+│   │   │   ├── bank.routes.js        # Bank officer endpoints
+│   │   │   ├── consent.routes.js     # Consent management endpoints
+│   │   │   └── credential.routes.js  # Credential endpoints
+│   │   ├── controllers/              # Request handlers
+│   │   │   ├── authController.js
+│   │   │   ├── kycController.js
+│   │   │   ├── bankController.js
+│   │   │   ├── consentController.js
+│   │   │   └── credentialController.js
+│   │   ├── models/                   # Mongoose schemas
+│   │   │   ├── User.js
+│   │   │   ├── KYCRequest.js
+│   │   │   ├── Credential.js
+│   │   │   └── Consent.js
+│   │   ├── services/                 # Business logic
+│   │   │   ├── blockchain/
+│   │   │   │   ├── blockchainService.js
+│   │   │   │   └── credentialService.js
+│   │   │   └── kycService.js
+│   │   ├── middleware/               # Custom middleware
+│   │   │   ├── auth.js               # JWT verification
+│   │   │   ├── authorize.js          # Role-based access
+│   │   │   ├── errorHandler.js       # Error handling
+│   │   │   └── validators.js         # Input validation
+│   │   ├── validators/               # Request validation schemas
+│   │   ├── tests/                    # Test files
+│   │   ├── app.js                    # Express app configuration
+│   │   └── server.js                 # Server entry point
+│   ├── uploads/                      # Uploaded documents
+│   ├── package.json
+│   ├── jest.config.js
+│   └── eslint.config.js
+│
+├── blockchain/                       # Smart contracts & deployment
+│   ├── contracts/
+│   │   └── CredentialRegistry.sol    # Main smart contract
+│   ├── scripts/
+│   │   ├── deploy.js                 # Deployment script
+│   │   └── setup-issuers.js          # Issuer authorization
+│   ├── test/
+│   │   └── CredentialRegistry.test.js
+│   ├── hardhat.config.js
+│   └── package.json
+│
+├── frontend/                         # React frontend application
+│   ├── src/
+│   │   ├── components/               # Reusable components
+│   │   │   ├── layout/
+│   │   │   ├── auth/
+│   │   │   ├── kyc/
+│   │   │   └── common/
+│   │   ├── pages/                    # Page components
+│   │   │   ├── HomePage.tsx
+│   │   │   ├── DashboardPage.tsx
+│   │   │   ├── LoginPage.tsx
+│   │   │   ├── SubmitKycPage.tsx
+│   │   │   ├── KycQueuePage.tsx
+│   │   │   ├── ReviewKycPage.tsx
+│   │   │   ├── CredentialsPage.tsx
+│   │   │   ├── ConsentsPage.tsx
+│   │   │   └── ...
+│   │   ├── services/                 # API services
+│   │   │   ├── api.ts                # Axios instance
+│   │   │   ├── authService.ts
+│   │   │   ├── kycService.ts
+│   │   │   └── credentialService.ts
+│   │   ├── contexts/                 # React contexts
+│   │   │   └── AuthContext.tsx
+│   │   ├── types/                    # TypeScript types
+│   │   ├── utils/                    # Utility functions
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   └── tailwind.config.js
+│
+├── scripts/                          # Utility scripts
+│   ├── demo-flow.js                  # Complete workflow demo
+│   └── mongo-init.js                 # MongoDB initialization
+│
+├── docker-compose.yml                # Docker services configuration
+├── start-all.sh                      # Startup script
+├── package.json                      # Root package.json
+├── LICENSE
+└── README.md                         # This file
+```
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
-- npm >= 9.0.0
-- Docker and Docker Compose
+- **Node.js** >= 18.0.0
+- **npm** >= 9.0.0
+- **Docker** and **Docker Compose**
+- **Git**
 
-### Option 1: Using the Startup Script (Recommended)
+### Installation
+
+#### 1. Clone the Repository
 
 ```bash
-# Clone the repository
-cd /home/ursus/projects/eKYC/eKYC
-
-# Run the startup script
-./start-all.sh
-
-# Then follow the instructions to:
-# 1. Start Hardhat node
-# 2. Deploy contracts
-# 3. Start backend server
+git clone https://github.com/yourusername/eKYC.git
+cd eKYC
 ```
 
-### Option 2: Manual Setup
+#### 2. Start Docker Services
 
-**1. Start Docker services:**
+Start MongoDB and Redis containers:
+
 ```bash
 docker-compose up -d
 ```
 
-**2. Install dependencies:**
+This will start:
+
+- **MongoDB** on port 27017
+- **Redis** on port 6379
+- **MongoDB Express** (GUI) on port 8081
+- **Redis Commander** (GUI) on port 8082
+
+#### 3. Install Dependencies
+
 ```bash
-# Root (for demo script)
+# Install root dependencies
 npm install
 
-# Backend
+# Install backend dependencies
 cd backend && npm install && cd ..
 
-# Blockchain
+# Install blockchain dependencies
 cd blockchain && npm install && cd ..
+
+# Install frontend dependencies
+cd frontend && npm install && cd ..
 ```
 
-**3. Configure environment variables:**
+#### 4. Configure Environment Variables
+
+Create `.env` file in the `backend` directory:
+
 ```bash
-# Create backend/.env
-cp backend/.env.example backend/.env
-
-# Edit backend/.env with your settings
+cd backend
+cp .env.example .env
 ```
 
-**4. Start Hardhat node:**
+Edit `backend/.env`:
+
+```env
+# Server
+NODE_ENV=development
+PORT=5000
+API_VERSION=v1
+
+# Database
+MONGODB_URI=mongodb://admin:eKYC_Admin_2025@localhost:27017/ekyc_db?authSource=admin
+
+# Redis
+REDIS_URL=redis://:eKYC_Redis_2025@localhost:6379
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
+JWT_EXPIRE=24h
+JWT_REFRESH_EXPIRE=7d
+
+# Blockchain
+BLOCKCHAIN_NETWORK=localhost
+BLOCKCHAIN_RPC_URL=http://127.0.0.1:8545
+CONTRACT_ADDRESS=<will-be-filled-after-deployment>
+PRIVATE_KEY=<hardhat-account-private-key>
+
+# File Upload
+MAX_FILE_SIZE=5242880
+UPLOAD_PATH=./uploads
+```
+
+#### 5. Start Hardhat Blockchain Node
+
+In a new terminal:
+
 ```bash
 cd blockchain
 npm run node
 ```
 
-**5. Deploy smart contracts (new terminal):**
+Keep this terminal running. You'll see test accounts with private keys and ETH balances.
+
+#### 6. Deploy Smart Contracts
+
+In another terminal:
+
 ```bash
 cd blockchain
 npm run deploy:local
-# Copy the contract address to backend/.env
 ```
 
-**6. Start backend server (new terminal):**
+Copy the deployed contract address and update `CONTRACT_ADDRESS` in `backend/.env`.
+
+#### 7. Start Backend Server
+
+In another terminal:
+
 ```bash
 cd backend
 npm run dev
 ```
 
-**7. Test the system:**
-```bash
-# Run demo flow
-node scripts/demo-flow.js
+Backend will start on http://localhost:5000
 
-# Or run tests
-cd backend && npm test
-```
+#### 8. Start Frontend Development Server
 
-## Project Structure
-
-```
-eKYC/
-├── backend/                    # Backend Express.js application
-│   ├── src/
-│   │   ├── routes/            # API route definitions
-│   │   │   ├── auth.routes.js
-│   │   │   ├── kyc.routes.js
-│   │   │   └── bank.routes.js
-│   │   ├── controllers/       # Request handlers
-│   │   ├── models/            # Mongoose schemas
-│   │   ├── middleware/        # Custom middleware
-│   │   │   ├── auth.js
-│   │   │   ├── errorHandler.js
-│   │   │   └── notFound.js
-│   │   ├── services/          # Business logic
-│   │   │   ├── blockchain/   # Blockchain integration
-│   │   │   └── kycService.js
-│   │   ├── validators/        # Request validation
-│   │   ├── tests/            # Test files
-│   │   │   └── api/
-│   │   │       └── integration.test.js
-│   │   ├── app.js            # Express app setup
-│   │   └── server.js         # Server entry point
-│   ├── package.json
-│   ├── API_DOCUMENTATION.md   # Complete API reference
-│   ├── INTEGRATION_SUMMARY.md # Integration overview
-│   └── QUICK_START.md        # Detailed setup guide
-│
-├── blockchain/                # Smart contracts & deployment
-│   ├── contracts/            # Solidity smart contracts
-│   ├── scripts/              # Deployment scripts
-│   ├── test/                 # Contract tests
-│   ├── hardhat.config.js
-│   └── package.json
-│
-├── scripts/                   # Utility scripts
-│   └── demo-flow.js          # Complete workflow demo
-│
-├── docker-compose.yml         # Docker services config
-├── start-all.sh              # Startup script
-└── README.md                 # This file
-```
-
-## API Endpoints
-
-### Authentication (`/api/v1/auth`)
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| POST | `/register/customer` | Public | Register new customer |
-| POST | `/register/bank-officer` | Public | Register new bank officer |
-| POST | `/login` | Public | Authenticate user |
-| POST | `/refresh` | Public | Refresh access token |
-| GET | `/me` | Private | Get current user |
-| POST | `/logout` | Private | Logout user |
-
-### KYC (`/api/v1/kyc`)
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| POST | `/submit` | Customer | Submit KYC request |
-| GET | `/status/:requestId` | Customer | Get KYC status |
-| GET | `/history` | Customer | Get KYC history |
-| GET | `/credentials` | Customer | Get blockchain credentials |
-
-### Bank (`/api/v1/bank`)
-| Method | Endpoint | Access | Description |
-|--------|----------|--------|-------------|
-| GET | `/kyc-requests` | Bank Officer | Get KYC requests |
-| GET | `/kyc-request/:id` | Bank Officer | Get KYC details |
-| POST | `/verify/:requestId` | Bank Officer | Approve/reject KYC |
-| POST | `/issue-credential` | Bank Officer | Issue blockchain credential |
-
-For detailed API documentation, see [backend/API_DOCUMENTATION.md](backend/API_DOCUMENTATION.md)
-
-## Testing
-
-### Run Integration Tests
-```bash
-cd backend
-
-# All tests
-npm test
-
-# Integration tests only
-npm run test:integration
-
-# With coverage
-npm test -- --coverage
-```
-
-### Run Demo Flow
-```bash
-# Ensure all services are running
-node scripts/demo-flow.js
-```
-
-The demo flow will:
-1. Register a customer
-2. Submit KYC request
-3. Register bank officer
-4. Bank officer approves KYC
-5. Issue blockchain credential
-6. Customer retrieves credential
-7. Display summary
-
-## Development
-
-### Start Development Environment
+In another terminal:
 
 ```bash
-# Terminal 1: Docker services
-docker-compose up
-
-# Terminal 2: Hardhat blockchain
-cd blockchain && npm run node
-
-# Terminal 3: Deploy contracts (once)
-cd blockchain && npm run deploy:local
-
-# Terminal 4: Backend server
-cd backend && npm run dev
-
-# Terminal 5: Development/Testing
-cd backend && npm test
+cd frontend
+npm run dev
 ```
 
-### Making Changes
+Frontend will start on http://localhost:5173
 
-- **Backend:** Automatically reloads (nodemon)
-- **Smart Contracts:** Recompile and redeploy
-- **Database:** Use Mongo Express at http://localhost:8081
-- **Redis:** Use Redis Commander at http://localhost:8082
+### Quick Start Script
 
-## Services & Ports
+Alternatively, use the automated startup script:
 
-| Service | Port | URL/Connection |
-|---------|------|----------------|
-| Backend API | 5000 | http://localhost:5000 |
-| MongoDB | 27017 | mongodb://localhost:27017 |
-| Redis | 6379 | redis://localhost:6379 |
-| Hardhat Node | 8545 | http://localhost:8545 |
-| Mongo Express | 8081 | http://localhost:8081 |
-| Redis Commander | 8082 | http://localhost:8082 |
-
-## Environment Variables
-
-### Backend (.env)
-```env
-PORT=5000
-NODE_ENV=development
-API_VERSION=v1
-
-MONGODB_URI=mongodb://admin:eKYC_Admin_2025@localhost:27017/ekyc_db?authSource=admin
-REDIS_URL=redis://:eKYC_Redis_2025@localhost:6379
-
-JWT_SECRET=your-secret-key
-JWT_EXPIRE=15m
-JWT_REFRESH_SECRET=your-refresh-secret
-JWT_REFRESH_EXPIRE=7d
-
-CORS_ORIGIN=http://localhost:3000
-
-BLOCKCHAIN_NETWORK=localhost
-BLOCKCHAIN_RPC_URL=http://localhost:8545
-PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
-```
-
-### Blockchain (.env)
-```env
-PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_KEY
-ETHERSCAN_API_KEY=YOUR_KEY
-```
-
-## Security Features
-
-- **Authentication:** JWT-based with access and refresh tokens
-- **Authorization:** Role-based access control (RBAC)
-- **Rate Limiting:** Configurable per endpoint
-- **Data Sanitization:** NoSQL injection prevention, XSS protection
-- **Security Headers:** Helmet.js configuration
-- **Password Hashing:** bcrypt
-- **CORS:** Configurable origins
-
-## Troubleshooting
-
-### Common Issues
-
-**MongoDB connection error:**
 ```bash
-# Check if Docker is running
-docker-compose ps
-
-# Restart MongoDB
-docker-compose restart mongodb
+./start-all.sh
 ```
 
-**Hardhat node not running:**
-```bash
-cd blockchain
-npm run node
+Follow the on-screen instructions to start services in the correct order.
+
+### Verify Installation
+
+1. **Check Backend Health**: http://localhost:5000/health
+2. **Check MongoDB Express**: http://localhost:8081 (admin/admin123)
+3. **Check Redis Commander**: http://localhost:8082
+4. **Check Frontend**: http://localhost:5173
+
+## 📚 API Documentation
+
+### Base URL
+
+```
+http://localhost:5000/api/v1
 ```
 
-**Contract not deployed:**
+### Authentication Endpoints
+
+#### Register Customer
+
+```http
+POST /auth/register/customer
+Content-Type: application/json
+
+{
+  "email": "customer@example.com",
+  "password": "SecurePass123!",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "+1234567890"
+}
+```
+
+#### Register Bank Officer
+
+```http
+POST /auth/register/bank-officer
+Content-Type: application/json
+
+{
+  "email": "officer@bank.com",
+  "password": "SecurePass123!",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "employeeId": "EMP001",
+  "bankName": "Global Bank"
+}
+```
+
+#### Login
+
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "customer@example.com",
+  "password": "SecurePass123!"
+}
+
+Response:
+{
+  "success": true,
+  "data": {
+    "user": { ... },
+    "accessToken": "eyJhbGc...",
+    "refreshToken": "eyJhbGc..."
+  }
+}
+```
+
+#### Get Current User
+
+```http
+GET /auth/me
+Authorization: Bearer <accessToken>
+```
+
+### KYC Endpoints
+
+#### Submit KYC Request
+
+```http
+POST /kyc/submit
+Authorization: Bearer <accessToken>
+Content-Type: multipart/form-data
+
+{
+  "documentType": "nid",
+  "documentNumber": "1234567890",
+  "dateOfBirth": "1990-01-01",
+  "address": "123 Main St, City",
+  "documents": [<file1>, <file2>]
+}
+```
+
+#### Get KYC Status
+
+```http
+GET /kyc/status/:requestId
+Authorization: Bearer <accessToken>
+```
+
+#### Get KYC History
+
+```http
+GET /kyc/history
+Authorization: Bearer <accessToken>
+```
+
+#### Get My Credentials
+
+```http
+GET /kyc/credentials
+Authorization: Bearer <accessToken>
+```
+
+### Bank Officer Endpoints
+
+#### Get KYC Queue
+
+```http
+GET /bank/kyc-requests?status=pending&page=1&limit=10
+Authorization: Bearer <accessToken>
+```
+
+#### Get KYC Request Details
+
+```http
+GET /bank/kyc-request/:id
+Authorization: Bearer <accessToken>
+```
+
+#### Verify KYC Request
+
+```http
+POST /bank/verify/:requestId
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "action": "approve",
+  "comments": "All documents verified successfully"
+}
+```
+
+#### Issue Blockchain Credential
+
+```http
+POST /bank/issue-credential
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "requestId": "request_id_here",
+  "credentialType": 2,
+  "credentialData": {
+    "fullName": "John Doe",
+    "documentNumber": "1234567890",
+    "verificationLevel": "full"
+  }
+}
+```
+
+### Consent Management Endpoints
+
+#### Create Consent Request
+
+```http
+POST /consent/create
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "credentialId": "cred_id_here",
+  "verifierId": "verifier_user_id",
+  "purpose": "Loan application verification",
+  "expiresIn": 86400
+}
+```
+
+#### Grant Consent
+
+```http
+POST /consent/:consentId/grant
+Authorization: Bearer <accessToken>
+```
+
+#### Deny Consent
+
+```http
+POST /consent/:consentId/deny
+Authorization: Bearer <accessToken>
+```
+
+#### Revoke Consent
+
+```http
+POST /consent/:consentId/revoke
+Authorization: Bearer <accessToken>
+```
+
+#### Get My Consents
+
+```http
+GET /consent/my-consents
+Authorization: Bearer <accessToken>
+```
+
+### Credential Endpoints
+
+#### Get Credential Details
+
+```http
+GET /credentials/:credentialId
+Authorization: Bearer <accessToken>
+```
+
+#### Revoke Credential
+
+```http
+POST /credentials/:credentialId/revoke
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "reason": "Document expired"
+}
+```
+
+#### Check Revocation Status
+
+```http
+GET /credentials/:credentialId/revocation-status
+```
+
+### Response Format
+
+All API responses follow this format:
+
+**Success Response:**
+
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Operation successful"
+}
+```
+
+**Error Response:**
+
+```json
+{
+  "success": false,
+  "error": "Error message",
+  "statusCode": 400
+}
+```
+
+### Status Codes
+
+- `200` - OK
+- `201` - Created
+- `400` - Bad Request
+- `401` - Unauthorized
+- `403` - Forbidden
+- `404` - Not Found
+- `500` - Internal Server Error
+
+## 🔗 Smart Contracts
+
+### CredentialRegistry Contract
+
+The main smart contract for storing and managing credentials on the blockchain.
+
+#### Contract Structure
+
+```solidity
+struct Credential {
+    bytes32 credentialHash;      // SHA256 hash of credential data
+    address issuer;              // Bank officer who issued
+    address holder;              // Credential owner
+    uint256 issuedAt;           // Timestamp
+    bool isRevoked;             // Revocation status
+    uint256 credentialType;     // 1 = Student ID, 2 = KYC
+}
+```
+
+#### Key Functions
+
+**Issue Credential** (Authorized Issuers Only)
+
+```solidity
+function issueCredential(
+    bytes32 _credentialId,
+    bytes32 _credentialHash,
+    address _holder,
+    uint256 _credentialType
+) external onlyAuthorizedIssuer
+```
+
+**Revoke Credential** (Issuer Only)
+
+```solidity
+function revokeCredential(bytes32 _credentialId) external
+```
+
+**Grant Consent** (Holder Only)
+
+```solidity
+function grantConsent(
+    address _verifier,
+    bytes32 _credentialId
+) external
+```
+
+**Verify Credential** (Public)
+
+```solidity
+function verifyCredential(bytes32 _credentialId)
+    external view returns (bool)
+```
+
+**Get Credential** (Public)
+
+```solidity
+function getCredential(bytes32 _credentialId)
+    external view returns (Credential memory)
+```
+
+#### Events
+
+```solidity
+event CredentialIssued(
+    bytes32 indexed credentialId,
+    address indexed issuer,
+    address indexed holder,
+    uint256 credentialType
+);
+
+event CredentialRevoked(bytes32 indexed credentialId);
+
+event ConsentGranted(
+    address indexed holder,
+    address indexed verifier,
+    bytes32 indexed credentialId
+);
+```
+
+#### Deployment
+
+The contract is deployed using Hardhat:
+
 ```bash
 cd blockchain
 npm run deploy:local
-# Update CONTRACT_ADDRESS in backend/.env
 ```
 
-**Port already in use:**
+Contract artifacts are stored in `blockchain/deployments/`.
+
+## 🧪 Testing
+
+### Backend Tests
+
 ```bash
-# Find and kill process
-lsof -i :5000
-kill -9 <PID>
+cd backend
+
+# Run all tests
+npm test
+
+# Run with coverage
+npm run test
+
+# Run specific test suite
+npm run test:unit
+npm run test:integration
+npm run test:blockchain
+
+# Run in watch mode
+npm run test:watch
 ```
 
-For more troubleshooting, see [backend/QUICK_START.md](backend/QUICK_START.md)
+### Blockchain Tests
 
-## Documentation
+```bash
+cd blockchain
 
-- **[API Documentation](backend/API_DOCUMENTATION.md)** - Complete API reference with examples
-- **[Quick Start Guide](backend/QUICK_START.md)** - Detailed setup instructions
-- **[Integration Summary](backend/INTEGRATION_SUMMARY.md)** - Overview of integration work
-- **[Blockchain Service](backend/src/services/blockchain/README.md)** - Blockchain integration details
+# Run all tests
+npm test
 
-## Tech Stack
+# Run with coverage
+npm run test:coverage
 
-### Backend
-- **Runtime:** Node.js 18+
-- **Framework:** Express.js
-- **Database:** MongoDB (with Mongoose)
-- **Cache:** Redis (ioredis)
-- **Authentication:** JWT (jsonwebtoken)
-- **Validation:** express-validator, Joi
-- **Security:** Helmet, CORS, rate-limit
-- **Testing:** Jest, Supertest
-- **Logging:** Morgan, Winston
+# Run with gas reporting
+npm run test:gas
+```
 
-### Blockchain
-- **Framework:** Hardhat
-- **Language:** Solidity 0.8.24
-- **Library:** ethers.js v6
-- **Network:** Local/Sepolia testnet
+### Frontend Tests
 
-### Infrastructure
-- **Containerization:** Docker, Docker Compose
-- **Database GUI:** Mongo Express
-- **Cache GUI:** Redis Commander
+```bash
+cd frontend
 
-## Workflow
+# Run tests
+npm test
 
-### Customer Flow
-1. Customer registers account
-2. Customer submits KYC with documents
-3. Customer checks KYC status
-4. Customer retrieves blockchain credential
+# Type checking
+npm run type-check
+```
 
-### Bank Officer Flow
-1. Bank officer registers/logs in
-2. Views pending KYC requests
-3. Reviews KYC details and documents
-4. Approves or rejects KYC
-5. Issues blockchain credential for approved KYC
+### E2E Testing
 
-### Blockchain Flow
-1. Smart contract deployed to network
-2. Bank officer registered as issuer
-3. Credential issued on-chain
-4. Transaction hash and block number stored
-5. Customer can verify credential on blockchain
+Run the complete demo flow:
 
-## Roadmap
+```bash
+# From root directory
+npm run demo
 
-- [ ] Frontend application (React/Vue)
-- [ ] Email notifications
-- [ ] Document verification AI
-- [ ] Multi-signature approval
-- [ ] Credential revocation
-- [ ] Admin dashboard
-- [ ] Analytics and reporting
-- [ ] Mobile app
+# Or directly
+node scripts/demo-flow.js
+```
 
-## Contributing
+This will:
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
+1. Register a customer and bank officer
+2. Submit a KYC request
+3. Verify the KYC request
+4. Issue a blockchain credential
+5. Create and grant consent
+6. Verify credential on blockchain
 
-## License
+### Test Coverage
 
-MIT License - see LICENSE file for details
+The project maintains high test coverage:
 
-## Support
+- **Backend**: Controllers, Services, Models
+- **Blockchain**: Smart contract functions and edge cases
+- **Integration**: API endpoints and workflows
 
-For questions or issues:
-- Check the documentation in `/backend` directory
-- Review troubleshooting section
-- Open an issue on GitHub
+## 🚀 Deployment
+
+### Production Environment Variables
+
+Create `backend/.env.production`:
+
+```env
+NODE_ENV=production
+PORT=5000
+
+# Use production MongoDB
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/ekyc
+
+# Use production Redis
+REDIS_URL=redis://production-redis:6379
+
+# Strong secrets
+JWT_SECRET=<generate-strong-secret>
+JWT_REFRESH_SECRET=<generate-strong-secret>
+
+# Production blockchain (Ethereum mainnet or testnet)
+BLOCKCHAIN_NETWORK=mainnet
+BLOCKCHAIN_RPC_URL=https://mainnet.infura.io/v3/YOUR_KEY
+CONTRACT_ADDRESS=<deployed-contract-address>
+PRIVATE_KEY=<secure-private-key>
+```
+
+### Backend Deployment
+
+```bash
+cd backend
+npm run build
+npm start
+```
+
+### Frontend Deployment
+
+```bash
+cd frontend
+npm run build:production
+```
+
+The `dist` folder contains production-ready static files. Deploy to:
+
+- **Netlify**
+- **Vercel**
+- **AWS S3 + CloudFront**
+- **Nginx**
+
+### Blockchain Deployment
+
+Deploy to Ethereum testnet (Sepolia):
+
+```bash
+cd blockchain
+npm run deploy:sepolia
+```
+
+Deploy to mainnet (use with caution):
+
+```bash
+npm run deploy:mainnet
+```
+
+### Docker Production Deployment
+
+Build and run production containers:
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+## 🔒 Security Features
+
+### Authentication & Authorization
+
+- **JWT Tokens**: Secure access and refresh tokens
+- **Password Hashing**: Bcrypt with salt rounds
+- **Role-Based Access Control (RBAC)**: Customer, Bank Officer, Admin roles
+- **Session Management**: Redis-based session storage
+
+### API Security
+
+- **Rate Limiting**: Prevent brute force attacks
+- **CORS**: Configured cross-origin resource sharing
+- **Helmet**: Security headers
+- **Input Sanitization**: MongoDB injection prevention
+- **XSS Protection**: Cross-site scripting prevention
+- **HPP**: HTTP Parameter Pollution protection
+
+### Data Security
+
+- **Encryption**: Sensitive data encryption at rest
+- **HTTPS**: TLS/SSL in production
+- **File Upload Validation**: Type and size restrictions
+- **SQL/NoSQL Injection Prevention**: Input validation
+
+### Blockchain Security
+
+- **Immutability**: Credential data cannot be altered
+- **Access Control**: Only authorized issuers can issue credentials
+- **Consent Management**: Holders control credential access
+- **Audit Trail**: All transactions are recorded on blockchain
+
+### Best Practices
+
+- Environment variable protection
+- Secure credential storage
+- Regular security audits
+- Dependency vulnerability scanning
+- Error handling without information leakage
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
-**Last Updated:** November 22, 2024
+## 🤝 Contributing
 
-**Status:** ✅ All APIs integrated and tested
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📞 Support
+
+For support, please open an issue in the GitHub repository or contact the development team.
+
+## 🗺 Roadmap
+
+- [ ] Mobile application (React Native)
+- [ ] Multi-chain support (Polygon, BSC)
+- [ ] Decentralized identity (DID) integration
+- [ ] Advanced analytics dashboard
+- [ ] AI-powered document verification
+- [ ] Multi-language support
+- [ ] Biometric authentication
+- [ ] Zero-knowledge proofs for privacy
+
+---
+
+**Built with ❤️ for CSE499B Capstone Project**

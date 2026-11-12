@@ -1,4 +1,5 @@
 const Joi = require('joi');
+const { mongoObjectIdPattern, pageSchema, limitSchema } = require('./commonSchemas');
 
 /**
  * KYC submission validation schema
@@ -121,27 +122,8 @@ const submitKycSchema = Joi.object({
  * Pagination validation schema
  */
 const paginationSchema = Joi.object({
-    page: Joi.number()
-        .integer()
-        .min(1)
-        .default(1)
-        .messages({
-            'number.base': 'Page must be a number',
-            'number.integer': 'Page must be an integer',
-            'number.min': 'Page must be at least 1'
-        }),
-
-    limit: Joi.number()
-        .integer()
-        .min(1)
-        .max(100)
-        .default(10)
-        .messages({
-            'number.base': 'Limit must be a number',
-            'number.integer': 'Limit must be an integer',
-            'number.min': 'Limit must be at least 1',
-            'number.max': 'Limit cannot exceed 100'
-        }),
+    page: pageSchema,
+    limit: limitSchema,
     
     status: Joi.string()
         .valid('draft', 'submitted', 'pending', 'under_review', 'approved', 'rejected')
@@ -183,7 +165,7 @@ const credentialFilterSchema = Joi.object({
  */
 const objectIdSchema = Joi.object({
     requestId: Joi.string()
-        .pattern(/^[0-9a-fA-F]{24}$/)
+        .pattern(mongoObjectIdPattern)
         .required()
         .messages({
             'string.pattern.base': 'Invalid request ID format',

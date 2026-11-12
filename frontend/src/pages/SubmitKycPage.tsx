@@ -11,6 +11,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { kycService } from "@/services/kycService";
+import { isValidNid } from "@/utils/validation";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { KycFormData, SubmitKycRequest, Credential } from "@/types";
 
@@ -100,8 +101,7 @@ export const SubmitKycPage: React.FC = () => {
         newErrors.documentNumber = "Document number is required";
       } else {
         // Validate NID number format (must be 10, 13, or 17 digits)
-        const nidPattern = /^\d{10}$|^\d{13}$|^\d{17}$/;
-        if (!nidPattern.test(formData.documentNumber.trim())) {
+        if (!isValidNid(formData.documentNumber)) {
           newErrors.documentNumber = "NID number must be exactly 10, 13, or 17 digits";
         }
       }
@@ -193,8 +193,7 @@ export const SubmitKycPage: React.FC = () => {
 
         // Validate NID number format (must be 10, 13, or 17 digits)
         const nidNumber = formData.documentNumber?.trim() || '';
-        const nidPattern = /^\d{10}$|^\d{13}$|^\d{17}$/;
-        if (!nidPattern.test(nidNumber)) {
+        if (!isValidNid(nidNumber)) {
           setErrors({
             submit: "NID number must be exactly 10, 13, or 17 digits.",
           });

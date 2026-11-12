@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Award, Mail, Lock, User, AlertCircle } from "lucide-react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { handleApiError, validateEmail, validatePassword } from "@/utils";
+import { isValidNid } from "@/utils/validation";
 
 const RegisterCustomerPage: React.FC = () => {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ const RegisterCustomerPage: React.FC = () => {
     // NID validation
     if (!formData.nid_number) {
       errors.nid_number = "NID number is required";
-    } else if (!/^\d{10}$|^\d{13}$|^\d{17}$/.test(formData.nid_number)) {
+    } else if (!isValidNid(formData.nid_number)) {
       errors.nid_number = "NID number must be 10, 13, or 17 digits";
     }
 

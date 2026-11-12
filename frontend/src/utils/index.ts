@@ -1,8 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
 
-// Re-export error handling utilities
-export * from "./errorHandler";
-
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
@@ -81,19 +78,6 @@ export function copyToClipboard(text: string): Promise<void> {
   }
 }
 
-export function downloadAsJSON(data: any, filename: string): void {
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${filename}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 export function getStatusColor(status: string): string {
   const statusColors: Record<string, string> = {
     active:
@@ -123,21 +107,6 @@ export function getStatusColor(status: string): string {
     statusColors[status.toLowerCase()] ||
     "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
   );
-}
-
-export function formatPhoneNumber(phone: string): string {
-  // Remove all non-digit characters
-  const cleaned = phone.replace(/\D/g, "");
-
-  // Format as +XX XXX XXX XXXX
-  if (cleaned.length === 11 && cleaned.startsWith("1")) {
-    return `+${cleaned[0]} ${cleaned.slice(1, 4)} ${cleaned.slice(
-      4,
-      7
-    )} ${cleaned.slice(7)}`;
-  }
-
-  return phone;
 }
 
 export function validateEmail(email: string): boolean {

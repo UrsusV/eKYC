@@ -8,6 +8,7 @@ const {
     queryConsentsSchema,
     consentIdSchema
 } = require('../validators/consentValidators');
+const { sendValidationError } = require('../validators/validationResponse');
 
 /**
  * @desc    Create consent request (usually done automatically during KYC submission)
@@ -19,14 +20,7 @@ exports.createConsent = async (req, res) => {
         // Validate input
         const { error, value } = createConsentSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const userId = req.user.id;
@@ -144,14 +138,7 @@ exports.grantConsent = async (req, res) => {
         // Validate input
         const { error, value } = grantConsentSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const userId = req.user.id;
@@ -296,14 +283,7 @@ exports.revokeConsent = async (req, res) => {
     try {
         const { error, value } = revokeConsentSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const userId = req.user.id;
@@ -372,14 +352,7 @@ exports.getMyConsents = async (req, res) => {
     try {
         const { error, value } = queryConsentsSchema.validate(req.query);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const userId = req.user.id;
@@ -518,14 +491,7 @@ exports.bulkGrantConsents = async (req, res) => {
     try {
         const { error, value } = bulkGrantConsentSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const userId = req.user.id;

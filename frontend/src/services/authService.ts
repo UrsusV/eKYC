@@ -85,10 +85,6 @@ class AuthService {
     }
   }
 
-  getUser(): User | null {
-    return apiClient.getUser();
-  }
-
   isAuthenticated(): boolean {
     return apiClient.isAuthenticated();
   }

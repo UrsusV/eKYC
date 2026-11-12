@@ -1,9 +1,9 @@
 import React, { ReactNode } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/utils";
 import {
   Home,
-  FileText,
   Upload,
   History,
   Shield,
@@ -12,7 +12,6 @@ import {
   LogOut,
   Menu,
   X,
-  Users,
   ClipboardList,
   Award,
 } from "lucide-react";
@@ -63,11 +62,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
 
     if (user.role === "admin") {
-      return [
-        ...common,
-        { name: "Users", href: "/admin/users", icon: Users },
-        { name: "Audit Logs", href: "/admin/audit", icon: FileText },
-      ];
+      return common;
     }
 
     return common;
@@ -188,9 +183,5 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     </div>
   );
 };
-
-function cn(...classes: (string | boolean | undefined)[]): string {
-  return classes.filter(Boolean).join(" ");
-}
 
 export default Layout;

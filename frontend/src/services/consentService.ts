@@ -1,34 +1,15 @@
 import { apiClient } from "./apiClient";
+import { buildListQuery } from "./query";
+import { unwrapData } from "./serviceHelpers";
 import type { Consent, ApiResponse, PaginationParams } from "@/types";
 
 class ConsentService {
   async getMyConsents(
     params: PaginationParams = {}
   ): Promise<ApiResponse<Consent[]>> {
-    const { page = 1, limit = 10, status } = params;
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-    });
-    
-    // Only add status if it's provided and not 'all'
-    if (status && status !== "all") {
-      queryParams.append("status", status);
-    }
-
     return await apiClient.get<Consent[]>(
-      `/consent/my-consents?${queryParams}`
+      `/consent/my-consents?${buildListQuery(params)}`
     );
-  }
-
-  async getConsentDetails(consentId: string): Promise<Consent> {
-    const response = await apiClient.get<Consent>(`/consent/${consentId}`);
-
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to fetch consent");
   }
 
   async grantConsent(consentId: string): Promise<Consent> {
@@ -39,11 +20,7 @@ class ConsentService {
       }
     );
 
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to grant consent");
+    return unwrapData(response, "Failed to grant consent");
   }
 
   async denyConsent(consentId: string, reason: string): Promise<Consent> {
@@ -54,11 +31,7 @@ class ConsentService {
       }
     );
 
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to deny consent");
+    return unwrapData(response, "Failed to deny consent");
   }
 
   async revokeConsent(consentId: string, reason: string): Promise<Consent> {
@@ -69,22 +42,7 @@ class ConsentService {
       }
     );
 
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to revoke consent");
-  }
-
-  async bulkGrantConsents(consentIds: string[]): Promise<void> {
-    const response = await apiClient.post("/consent/bulk-grant", {
-      consentIds,
-      agreed: true,
-    });
-
-    if (!response.success) {
-      throw new Error(response.message || "Failed to grant consents");
-    }
+    return unwrapData(response, "Failed to revoke consent");
   }
 }
 

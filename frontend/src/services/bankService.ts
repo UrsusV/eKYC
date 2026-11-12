@@ -1,8 +1,8 @@
 import { apiClient } from "./apiClient";
+import { unwrapData } from "./serviceHelpers";
 import type {
   KycRequest,
   Credential,
-  IssueCredentialRequest,
   ApiResponse,
   PaginationParams,
 } from "@/types";
@@ -30,11 +30,7 @@ class BankService {
       `/bank/kyc-request/${requestId}`
     );
 
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to fetch KYC request");
+    return unwrapData(response, "Failed to fetch KYC request");
   }
 
   async verifyKyc(
@@ -52,26 +48,7 @@ class BankService {
       }
     );
 
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Verification failed");
-  }
-
-  async issueCredential(
-    requestData: IssueCredentialRequest
-  ): Promise<Credential> {
-    const response = await apiClient.post<Credential>(
-      "/bank/issue-credential",
-      requestData
-    );
-
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Credential issuance failed");
+    return unwrapData(response, "Verification failed");
   }
 
   async getIssuedCredentials(
@@ -102,11 +79,7 @@ class BankService {
       }
     );
 
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Credential revocation failed");
+    return unwrapData(response, "Credential revocation failed");
   }
 }
 

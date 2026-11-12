@@ -10,18 +10,9 @@ const {
     bulkGrantConsents
 } = require('../controllers/consentController');
 const { authenticate, authorize } = require('../middleware/auth');
+const conditionalMiddleware = require('../middleware/conditionalMiddleware');
 
 const router = express.Router();
-
-/**
- * Utility to conditionally apply middleware
- * Skips rate limiting in test environment
- */
-const conditionalMiddleware = (middleware) => {
-    return process.env.NODE_ENV === 'test'
-        ? (req, res, next) => next()
-        : middleware;
-};
 
 /**
  * Rate limiter for consent operations

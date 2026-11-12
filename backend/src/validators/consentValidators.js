@@ -1,11 +1,12 @@
 const Joi = require('joi');
+const { mongoObjectIdPattern } = require('./commonSchemas');
 
 /**
  * Create consent validation schema
  */
 const createConsentSchema = Joi.object({
     kycRequestId: Joi.string()
-        .pattern(/^[0-9a-fA-F]{24}$/)
+        .pattern(mongoObjectIdPattern)
         .required()
         .messages({
             'string.pattern.base': 'Invalid KYC request ID format',
@@ -136,7 +137,7 @@ const revokeConsentSchema = Joi.object({
 const bulkGrantConsentSchema = Joi.object({
     consentIds: Joi.array()
         .items(
-            Joi.string().pattern(/^[0-9a-fA-F]{24}$/)
+            Joi.string().pattern(mongoObjectIdPattern)
         )
         .min(1)
         .required()
@@ -185,7 +186,7 @@ const queryConsentsSchema = Joi.object({
         .optional(),
 
     kycRequestId: Joi.string()
-        .pattern(/^[0-9a-fA-F]{24}$/)
+        .pattern(mongoObjectIdPattern)
         .optional(),
 
     page: Joi.number()
@@ -207,7 +208,7 @@ const queryConsentsSchema = Joi.object({
  */
 const consentIdSchema = Joi.object({
     consentId: Joi.string()
-        .pattern(/^[0-9a-fA-F]{24}$/)
+        .pattern(mongoObjectIdPattern)
         .required()
         .messages({
             'string.pattern.base': 'Invalid consent ID format',

@@ -5,6 +5,7 @@ const Consent = require('../models/Consent');
 const KycRequest = require('../models/KycRequest');
 const { getCredentialService } = require('../services/blockchain');
 const Joi = require('joi');
+const { sendValidationError } = require('../validators/validationResponse');
 
 /**
  * @desc    Revoke a credential (issuer only)
@@ -34,14 +35,7 @@ exports.revokeCredential = async (req, res) => {
 
         const { error, value } = schema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const { reason, details } = value;

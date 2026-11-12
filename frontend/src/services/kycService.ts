@@ -1,4 +1,6 @@
 import { apiClient } from "./apiClient";
+import { buildListQuery } from "./query";
+import { unwrapData } from "./serviceHelpers";
 import type {
   KycRequest,
   SubmitKycRequest,
@@ -10,12 +12,7 @@ import type {
 class KycService {
   async submitKyc(kycData: SubmitKycRequest): Promise<KycRequest> {
     const response = await apiClient.post<KycRequest>("/kyc/submit", kycData);
-
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "KYC submission failed");
+    return unwrapData(response, "KYC submission failed");
   }
 
   async getKycStatus(requestId: string): Promise<KycRequest> {
@@ -23,45 +20,23 @@ class KycService {
       `/kyc/status/${requestId}`
     );
 
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.message || "Failed to fetch KYC status");
+    return unwrapData(response, "Failed to fetch KYC status");
   }
 
   async getKycHistory(
     params: PaginationParams = {}
   ): Promise<ApiResponse<KycRequest[]>> {
-    const { page = 1, limit = 10, status } = params;
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-    });
-    
-    // Only add status if it's provided and not 'all'
-    if (status && status !== "all") {
-      queryParams.append("status", status);
-    }
-
-    return await apiClient.get<KycRequest[]>(`/kyc/history?${queryParams}`);
+    return await apiClient.get<KycRequest[]>(
+      `/kyc/history?${buildListQuery(params)}`
+    );
   }
 
   async getCredentials(
     params: PaginationParams = {}
   ): Promise<ApiResponse<Credential[]>> {
-    const { page = 1, limit = 10, status } = params;
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString(),
-    });
-    
-    // Only add status if it's provided and not 'all'
-    if (status && status !== "all") {
-      queryParams.append("status", status);
-    }
-
-    return await apiClient.get<Credential[]>(`/kyc/credentials?${queryParams}`);
+    return await apiClient.get<Credential[]>(
+      `/kyc/credentials?${buildListQuery(params)}`
+    );
   }
 
   // Helper: Convert File to Base64

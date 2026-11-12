@@ -8,6 +8,7 @@ const {
     credentialFilterSchema,
     objectIdSchema
 } = require('../validators/kycValidators');
+const { sendValidationError } = require('../validators/validationResponse');
 
 /**
  * @desc    Submit a new KYC request
@@ -19,14 +20,7 @@ exports.submitKycRequest = async (req, res) => {
         // Validate input
         const { error, value } = submitKycSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const {

@@ -1,9 +1,25 @@
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const { ethers } = require('ethers');
 const User = require('../models/User');
 const Bank = require('../models/Bank');
 const { registerCustomerSchema, registerBankOfficerSchema, loginSchema } = require('../validators/authValidators');
+const { sendValidationError } = require('../validators/validationResponse');
+
+const DEFAULT_CONTACT_INFO = {
+    primaryPhone: '01700000000',
+    presentAddress: {
+        division: 'Dhaka',
+        district: 'Dhaka',
+        upazila: 'N/A',
+        addressLine: 'N/A'
+    },
+    permanentAddress: {
+        division: 'Dhaka',
+        district: 'Dhaka',
+        upazila: 'N/A',
+        addressLine: 'N/A'
+    }
+};
 
 /**
  * Generate JWT token
@@ -84,14 +100,7 @@ exports.registerCustomer = async (req, res) => {
         // Validate input
         const { error, value } = registerCustomerSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map((detail) => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const { name, email, password, nid_number } = value;
@@ -138,21 +147,7 @@ exports.registerCustomer = async (req, res) => {
                 gender: 'other',
                 nationality: 'Bangladeshi'
             },
-            contactInfo: {
-                primaryPhone: '01700000000', // Temporary
-                presentAddress: {
-                    division: 'Dhaka',
-                    district: 'Dhaka',
-                    upazila: 'N/A',
-                    addressLine: 'N/A'
-                },
-                permanentAddress: {
-                    division: 'Dhaka',
-                    district: 'Dhaka',
-                    upazila: 'N/A',
-                    addressLine: 'N/A'
-                }
-            }
+            contactInfo: { ...DEFAULT_CONTACT_INFO }
         });
 
         sendTokenResponse(user, 201, res, 'Customer registered successfully');
@@ -176,14 +171,7 @@ exports.registerBankOfficer = async (req, res) => {
         // Validate input
         const { error, value } = registerBankOfficerSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map((detail) => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const { name, email, password, bank_id, officer_id } = value;
@@ -238,21 +226,7 @@ exports.registerBankOfficer = async (req, res) => {
                 gender: 'other',
                 nationality: 'Bangladeshi'
             },
-            contactInfo: {
-                primaryPhone: '01700000000', // Temporary
-                presentAddress: {
-                    division: 'Dhaka',
-                    district: 'Dhaka',
-                    upazila: 'N/A',
-                    addressLine: 'N/A'
-                },
-                permanentAddress: {
-                    division: 'Dhaka',
-                    district: 'Dhaka',
-                    upazila: 'N/A',
-                    addressLine: 'N/A'
-                }
-            },
+            contactInfo: { ...DEFAULT_CONTACT_INFO },
             bankOfficerInfo: {
                 employeeId: officer_id,
                 bankId: bank_id,
@@ -283,14 +257,7 @@ exports.login = async (req, res) => {
         // Validate input
         const { error, value } = loginSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map((detail) => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const { email, password } = value;

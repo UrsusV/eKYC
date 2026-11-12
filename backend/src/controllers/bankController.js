@@ -9,6 +9,7 @@ const {
     issueCredentialSchema,
     kycRequestsQuerySchema
 } = require('../validators/bankValidators');
+const { sendValidationError } = require('../validators/validationResponse');
 
 /**
  * @desc    Get KYC requests for bank officer's bank
@@ -20,14 +21,7 @@ exports.getKycRequests = async (req, res) => {
         // Validate query parameters
         const { error, value } = kycRequestsQuerySchema.validate(req.query);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const { status, page, limit } = value;
@@ -276,14 +270,7 @@ exports.verifyKycRequest = async (req, res) => {
         // Validate input
         const { error, value } = verifyKycSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const { approved, comments, rejectionCategory } = value;
@@ -571,14 +558,7 @@ exports.issueCredential = async (req, res) => {
         // Validate input
         const { error, value } = issueCredentialSchema.validate(req.body);
         if (error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: error.details.map(detail => ({
-                    field: detail.path.join('.'),
-                    message: detail.message
-                }))
-            });
+            return sendValidationError(res, error);
         }
 
         const { requestId } = value;

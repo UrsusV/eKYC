@@ -16,12 +16,10 @@ import type {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  isAuthenticated: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   registerCustomer: (data: RegisterCustomerRequest) => Promise<void>;
   registerBankOfficer: (data: RegisterBankOfficerRequest) => Promise<void>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -96,24 +94,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
-  const refreshUser = async () => {
-    try {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Failed to refresh user:", error);
-    }
-  };
-
   const value: AuthContextType = {
     user,
     loading,
-    isAuthenticated: !!user,
     login,
     registerCustomer,
     registerBankOfficer,
     logout,
-    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

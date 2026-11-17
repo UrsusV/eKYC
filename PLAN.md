@@ -4,7 +4,7 @@
 
 ## Overview
 
-The prototype’s happy path works, but several bugs drop identity data and desync Mongo from the chain. The paper’s privacy claims (encryption at rest, salted hashes, per-bank signatures, holder-signed consent, document deletion, authorized verifiers, Sepolia deployment) are not what this repo does. Code should implement missing controls; Sepolia wording should be corrected in the paper, not faked in the prototype.
+The prototype’s happy path works, but several bugs drop identity data and desync Mongo from the chain. The paper’s privacy claims (encryption at rest, salted hashes, per-bank signatures, holder-signed consent, document deletion, authorized verifiers) are not what this repo does. This pass implements those missing controls in the codebase. The paper stays unchanged: no wording edits, and no Sepolia deploy to match the existing text.
 
 **First execution steps:** context files (this document + task register), then a Node 20 Compose stack so Mongo, Redis, Hardhat, backend, and frontend run without a host Node install.
 
@@ -48,8 +48,6 @@ sequenceDiagram
 | Document deletion | After first issuance (§4, Table 3, §7.3, conclusion) | Upload UI not wired; no delete path |
 | Verifier | Authorized verifier, read-only | No `verifier` role; public chain reads |
 | Evaluation network | Abstract, §5.1 say Sepolia | Local Hardhat only; §6 / future work say Hardhat |
-
-**Paper edits (step 8):** Align abstract, contribution bullet, and §5.1 with §6 (local Hardhat). Fix §5.1 claims about sharded Mongo and Redis refresh tokens.
 
 ## Workstreams
 
@@ -127,12 +125,11 @@ See [Local Docker stack](#local-docker-stack) below. README quick start: `docker
 5. Contract ids + on-chain consent (section D).
 6. Issuance saga + per-bank keys (sections E–F).
 7. Holder key, consent flow, document deletion (section G).
-8. Paper wording (Sepolia, Redis, sharding).
-9. Throughput items (section H) as touched.
+8. Throughput items (section H) as touched.
 
 ## Deferred (not this pass)
 
-Public bank-officer registration; unused `checkPermissions`; `AuditLog`; admin issuer removal/override; permissioned chain; HttpOnly cookies; global `errorHandler` refactor; React Query.
+Public bank-officer registration; unused `checkPermissions`; `AuditLog`; admin issuer removal/override; permissioned chain; HttpOnly cookies; global `errorHandler` refactor; React Query. Paper text (Sepolia, Redis, sharding) is out of scope; do not edit the paper.
 
 ## References
 
